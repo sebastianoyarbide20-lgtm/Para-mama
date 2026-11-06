@@ -36,9 +36,17 @@ Abrí la dirección que aparece en la terminal (normalmente http://localhost:517
 
 ### Publicarla
 
-`npm run build` genera la carpeta `dist/`, que es un sitio estático: se puede subir tal cual a GitHub Pages, Netlify,
-Vercel, Cloudflare Pages o cualquier hosting. Usa rutas con `#` (por ejemplo `.../#/panel`), así que no hace falta
-configurar nada en el servidor, y funciona en cualquier subcarpeta.
+La app está publicada en GitHub Pages:
+
+**https://sebastianoyarbide20-lgtm.github.io/Para-mama/**
+
+Cada vez que se suben cambios a la rama principal, el workflow `.github/workflows/pages.yml` corre los tests, compila
+la app y actualiza la rama `gh-pages`, que es la que muestra GitHub Pages (en el repositorio: Settings → Pages → «Deploy
+from a branch» → `gh-pages` / `(root)`).
+
+`npm run build` genera la carpeta `dist/`, que es un sitio estático: también se puede subir tal cual a Netlify, Vercel,
+Cloudflare Pages o cualquier hosting. Usa rutas con `#` (por ejemplo `.../#/panel`), así que no hace falta configurar
+nada en el servidor, y funciona en cualquier subcarpeta.
 
 Una vez abierta, la app queda guardada para funcionar **sin internet** y se puede **agregar a la pantalla de inicio**
 del celular (en Chrome: menú ⋮ → «Agregar a la pantalla principal»; en iPhone/Safari: Compartir → «Agregar a
