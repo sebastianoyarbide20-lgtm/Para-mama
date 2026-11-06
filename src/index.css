@@ -1,0 +1,122 @@
+@import '@fontsource-variable/nunito';
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Nunito Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-crema: #fbf7f4;
+  --color-crema-dark: #f4ece6;
+
+  /* Rosa empolvado (color principal) */
+  --color-rosa-50: #fdf3f4;
+  --color-rosa-100: #fbe5e8;
+  --color-rosa-200: #f5c9d0;
+  --color-rosa-300: #eca3b0;
+  --color-rosa-400: #dd7488;
+  --color-rosa-500: #c9566d;
+  --color-rosa-600: #b03f58;
+  --color-rosa-700: #933249;
+  --color-rosa-800: #7a2d40;
+  --color-rosa-900: #66293a;
+
+  /* Verde salvia (acento) */
+  --color-salvia-50: #f3f7f4;
+  --color-salvia-100: #e3ede6;
+  --color-salvia-200: #c7dbcd;
+  --color-salvia-300: #a0c0aa;
+  --color-salvia-400: #74a083;
+  --color-salvia-500: #548467;
+  --color-salvia-600: #426a52;
+  --color-salvia-700: #365644;
+  --color-salvia-800: #2e4638;
+  --color-salvia-900: #263a2f;
+}
+
+@layer base {
+  html {
+    /* Letra un poco más grande que el estándar para que se lea cómodo. */
+    font-size: 106.25%;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-crema text-stone-800 antialiased;
+    min-height: 100dvh;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-rosa-400);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 1rem; /* evita el zoom automático en iPhone */
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  dialog::backdrop {
+    background: rgb(41 37 36 / 0.45);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .input-base {
+    @apply block w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-stone-800 shadow-xs placeholder:text-stone-400 transition-colors;
+    @apply hover:border-stone-400 focus:border-rosa-500 focus:ring-2 focus:ring-rosa-200 focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:bg-stone-100;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:border-red-600 focus:ring-red-200;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-toast-in {
+  animation: toast-in 180ms ease-out;
+}
+
+.animate-pop-in {
+  animation: pop-in 380ms ease-out;
+}
