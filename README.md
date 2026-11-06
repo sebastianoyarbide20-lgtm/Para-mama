@@ -80,6 +80,8 @@ Además, al abrir la app se le pide al navegador que **no borre** los datos auto
 
 ## Guía de uso (para la profesional)
 
+Hay una guía ilustrada para imprimir o mandar por WhatsApp: [`docs/Guia-de-uso-Mi-Cabina.pdf`](docs/Guia-de-uso-Mi-Cabina.pdf).
+
 La app tiene 3 sectores, siempre visibles en el menú (a la izquierda en la computadora, abajo en el celular):
 
 ### 1. Sesión de hoy — registrar lo que hiciste
