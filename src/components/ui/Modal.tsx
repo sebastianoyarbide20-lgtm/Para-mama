@@ -59,7 +59,10 @@ export function Modal({
       onClick={(e) => {
         if (e.target === ref.current) onCloseRef.current();
       }}
-      className={`m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl bg-white p-0 text-stone-800 shadow-2xl ${widths[size]} open:flex open:flex-col`}
+      className={`m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl bg-white p-0 text-stone-800 shadow-2xl ${widths[size]} open:flex open:flex-col ${
+        // Las ventanas grandes (formularios largos) ocupan toda la pantalla en el celular.
+        size === 'xl' ? 'max-sm:h-dvh max-sm:max-h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none' : ''
+      }`}
     >
       {open && (
         <>
@@ -68,7 +71,9 @@ export function Modal({
               <h2 id={titleId} className="text-xl font-bold text-stone-900">
                 {title}
               </h2>
-              {description && <p className="mt-0.5 text-stone-600">{description}</p>}
+              {description && (
+                <p className={`mt-0.5 text-stone-600 ${size === 'xl' ? 'max-sm:hidden' : ''}`}>{description}</p>
+              )}
             </div>
             <button
               type="button"

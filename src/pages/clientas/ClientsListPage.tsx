@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarClock, ChartColumn, ChevronRight, Clock, UserPlus, Users } from 'lucide-react';
+import { CalendarClock, ChartColumn, ChevronRight, ClipboardList, Clock, UserPlus, Users } from 'lucide-react';
+import { isAnamnesisComplete } from '../../lib/anamnesis';
 import type { Client } from '../../db/types';
 import { clientName, useData, useSkinTypeName } from '../../hooks/useData';
 import { daysBetween, formatDate, relativeDays, todayISO } from '../../lib/dates';
@@ -18,7 +19,7 @@ export const PANEL_TABS = [
   { to: '/clientas', label: 'Clientas', icon: Users },
 ];
 
-type Filter = 'todas' | 'inactivas' | 'proximas' | 'sin-sesiones';
+type Filter = 'todas' | 'inactivas' | 'proximas' | 'sin-sesiones' | 'ficha-incompleta';
 type Sort = 'ultima' | 'sesiones' | 'nombre' | 'alta' | 'proxima';
 
 export function ClientsListPage() {
@@ -43,13 +44,21 @@ export function ClientsListPage() {
     let inactivas = 0;
     let proximas = 0;
     let sinSesiones = 0;
+    let fichaIncompleta = 0;
     for (const c of clients) {
       const s = clientStats.get(c.id!);
       if (!s) sinSesiones++;
+      if (!isAnamnesisComplete(c)) fichaIncompleta++;
       if (isInactive(s, days, today)) inactivas++;
       if (nextSessionStatus(s, today)) proximas++;
     }
-    return { todas: clients.length, inactivas, proximas, 'sin-sesiones': sinSesiones };
+    return {
+      todas: clients.length,
+      inactivas,
+      proximas,
+      'sin-sesiones': sinSesiones,
+      'ficha-incompleta': fichaIncompleta,
+    };
   }, [clients, clientStats, days, today]);
 
   const list = useMemo(() => {
@@ -59,6 +68,7 @@ export function ClientsListPage() {
       if (filter === 'inactivas') return isInactive(s, days, today);
       if (filter === 'proximas') return nextSessionStatus(s, today) !== null;
       if (filter === 'sin-sesiones') return !s;
+      if (filter === 'ficha-incompleta') return !isAnamnesisComplete(c);
       return true;
     });
     const stat = (c: Client) => clientStats.get(c.id!) ?? EMPTY_CLIENT_STAT;
@@ -89,6 +99,7 @@ export function ClientsListPage() {
     { key: 'inactivas', label: `Hace +${days} días que no vienen` },
     { key: 'proximas', label: 'Con próxima sesión' },
     { key: 'sin-sesiones', label: 'Sin sesiones' },
+    { key: 'ficha-incompleta', label: 'Ficha incompleta' },
   ];
 
   return (
@@ -176,6 +187,7 @@ export function ClientsListPage() {
                 const s = clientStats.get(c.id!);
                 const inactive = isInactive(s, days, today);
                 const next = nextSessionStatus(s, today);
+                const incomplete = !isAnamnesisComplete(c);
                 const skin = skinName(c);
                 return (
                   <li key={c.id}>
@@ -202,8 +214,13 @@ export function ClientsListPage() {
                             'Sin sesiones todavía'
                           )}
                         </p>
-                        {(inactive || next) && (
+                        {(inactive || next || incomplete) && (
                           <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {incomplete && (
+                              <Badge tone="amber" icon={<ClipboardList />}>
+                                Ficha incompleta
+                              </Badge>
+                            )}
                             {inactive && s?.lastDate && (
                               <Badge tone="amber" icon={<Clock />}>
                                 Hace {daysBetween(s.lastDate, today)} días que no viene

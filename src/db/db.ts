@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type { Catalog, CatalogItem, Client, ClientField, Photo, Session, SettingRow } from './types';
+import { normalizeClient } from '../lib/anamnesis';
 
 /**
  * Base de datos local (IndexedDB) del navegador.
@@ -25,6 +26,19 @@ export class CabinaDB extends Dexie {
       photos: '++id, sessionId, clientId',
       settings: '&key',
     });
+    // v2: ficha inicial (anamnesis). Se completan los campos nuevos de las clientas existentes.
+    this.version(2)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table('clients')
+          .toCollection()
+          .modify((client: Record<string, unknown>) => {
+            const normalized = normalizeClient(client) as unknown as Record<string, unknown>;
+            for (const key of Object.keys(client)) if (!(key in normalized)) delete client[key];
+            Object.assign(client, normalized);
+          }),
+      );
   }
 }
 

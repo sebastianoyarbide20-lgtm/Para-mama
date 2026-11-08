@@ -6,6 +6,7 @@ import { formatDate, relativeDays } from '../lib/dates';
 import { sortSessionsDesc } from '../lib/stats';
 import { plural } from '../lib/format';
 import { ClientAlerts } from './ClientAlerts';
+import { isAnamnesisComplete } from '../lib/anamnesis';
 import { SessionSelections } from './SessionCard';
 import { Button } from './ui/Button';
 
@@ -41,6 +42,15 @@ export function ClientSummary({
           Ver ficha
         </Link>
       </div>
+
+      {!isAnamnesisComplete(client) && (
+        <p className="rounded-xl bg-amber-50 p-2.5 text-sm text-amber-950 ring-1 ring-amber-200">
+          <strong>Ficha inicial incompleta.</strong>{' '}
+          <Link to={`/clientas/${clientId}/editar`} className="font-bold underline underline-offset-2">
+            Completarla
+          </Link>
+        </p>
+      )}
 
       <ClientAlerts client={client} />
 

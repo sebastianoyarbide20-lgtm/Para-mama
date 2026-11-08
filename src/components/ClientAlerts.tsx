@@ -1,28 +1,33 @@
-import { Baby, Cigarette, Pill, TriangleAlert, Flower2 } from 'lucide-react';
+import { Flower2, HeartPulse, Pill, TriangleAlert, Wine } from 'lucide-react';
 import type { Client } from '../db/types';
 import { useSkinTypeName } from '../hooks/useData';
-import { labelOf, PREGNANCY_OPTIONS, SMOKES_OPTIONS } from './ClientForm';
+import { CONDITIONS, fitzpatrickInfo, HABITS, labelsOf } from '../lib/anamnesis';
 
-/** Datos críticos de la ficha (alergias, medicación, embarazo, piel) destacados. */
+/** Datos críticos de la ficha (alergias, condiciones, medicación, piel, hábitos) destacados. */
 export function ClientAlerts({ client, showEmpty = true }: { client: Client; showEmpty?: boolean }) {
   const skinName = useSkinTypeName();
   const skin = skinName(client);
-  const pregnancy =
-    client.pregnancy === 'embarazada' || client.pregnancy === 'lactancia'
-      ? labelOf(PREGNANCY_OPTIONS, client.pregnancy)
-      : '';
+  const fitz = fitzpatrickInfo(client.fitzpatrick);
+  const conditions = labelsOf(CONDITIONS, client.conditions);
+  const habits = labelsOf(HABITS, client.habits);
 
   const rows: { icon: React.ReactNode; label: string; value: string; tone: 'red' | 'amber' | 'neutral' }[] = [];
   if (client.allergies) rows.push({ icon: <TriangleAlert />, label: 'Alergias', value: client.allergies, tone: 'red' });
-  if (pregnancy) rows.push({ icon: <Baby />, label: 'Embarazo / lactancia', value: pregnancy, tone: 'red' });
+  if (conditions.length)
+    rows.push({ icon: <HeartPulse />, label: 'Condiciones', value: conditions.join(', '), tone: 'red' });
   if (client.medication) rows.push({ icon: <Pill />, label: 'Medicación', value: client.medication, tone: 'amber' });
-  if (skin) rows.push({ icon: <Flower2 />, label: 'Tipo de piel', value: skin, tone: 'neutral' });
-  if (client.smokes === 'si' || client.smokes === 'ocasionalmente')
-    rows.push({ icon: <Cigarette />, label: 'Fuma', value: labelOf(SMOKES_OPTIONS, client.smokes), tone: 'neutral' });
+  if (skin || fitz)
+    rows.push({
+      icon: <Flower2 />,
+      label: 'Piel',
+      value: [skin, fitz ? `Fitzpatrick ${fitz.value}` : ''].filter(Boolean).join(' · '),
+      tone: 'neutral',
+    });
+  if (habits.length) rows.push({ icon: <Wine />, label: 'Hábitos', value: habits.join(', '), tone: 'neutral' });
 
   if (rows.length === 0) {
     return showEmpty ? (
-      <p className="text-sm text-stone-500">Sin alergias, medicación ni datos de piel cargados en la ficha.</p>
+      <p className="text-sm text-stone-500">Sin alergias, condiciones ni medicación cargadas en la ficha.</p>
     ) : null;
   }
 

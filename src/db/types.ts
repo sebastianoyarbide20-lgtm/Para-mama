@@ -49,28 +49,53 @@ export interface CatalogItem {
   sample?: boolean;
 }
 
-export type SmokesValue = '' | 'no' | 'si' | 'ocasionalmente';
 export type YesNoValue = '' | 'si' | 'no';
-export type PregnancyValue = '' | 'no' | 'embarazada' | 'lactancia' | 'no-aplica';
+export type GenderValue = '' | 'femenino' | 'masculino' | 'otro';
+export type FitzpatrickValue = '' | 'I' | 'II' | 'III' | 'IV' | 'V' | 'VI';
+
+/** Análisis facial de la ficha inicial: opciones marcadas en cada grupo ("ninguno" si no hay hallazgos). */
+export interface FacialAnalysis {
+  capilares: string[];
+  sebaceas: string[];
+  pigmentacion: string[];
+  lineas: string[];
+}
 
 export type CustomFieldValue = string | number | boolean;
 
 export interface Client {
   id?: number;
+  /* Datos personales */
   firstName: string;
   lastName: string;
   phone: string;
   email: string;
   /** yyyy-mm-dd */
   birthDate: string;
-  skinTypeId: number | null;
+  gender: GenderValue;
+  /** yyyy-mm-dd: último tratamiento estético que se hizo (antes de venir) */
+  lastTreatmentDate: string;
+  /** true si nunca se hizo un tratamiento */
+  noPreviousTreatment: boolean;
+  /* Historia clínica y hábitos */
+  allergies: string;
+  /** true si se respondió que no tiene alergias */
+  noAllergies: boolean;
+  /** claves de HABITS, o ["ninguno"] */
+  habits: string[];
+  /** claves de HOME_CARE, o ["ninguno"] */
+  homeCare: string[];
   medication: string;
-  smokes: SmokesValue;
   exercises: YesNoValue;
   exerciseFrequency: string;
-  allergies: string;
-  pregnancy: PregnancyValue;
   history: string;
+  /* Piel */
+  skinTypeId: number | null;
+  fitzpatrick: FitzpatrickValue;
+  facial: FacialAnalysis;
+  /** claves de CONDITIONS, o ["ninguno"] */
+  conditions: string[];
+  /* Otros */
   notes: string;
   customFields: Record<string, CustomFieldValue>;
   createdAt: string;

@@ -86,8 +86,8 @@ La app tiene 3 sectores, siempre visibles en el menú (a la izquierda en la comp
 
 ### 1. Sesión de hoy — registrar lo que hiciste
 
-1. **¿A quién atendiste?** Buscá la clienta por nombre o teléfono. Si es nueva, tocá **Nueva clienta**: cargás nombre,
-   teléfono y tipo de piel y queda elegida al instante.
+1. **¿A quién atendiste?** Buscá la clienta por nombre o teléfono. Si es nueva, tocá **Nueva clienta**: se abre su
+   **ficha inicial** (ver más abajo); al guardarla queda elegida al instante.
 2. Al elegirla, vas a ver sus **alergias, medicación, tipo de piel y su última sesión**. Con **Usar la última sesión
    como base** se copian los tratamientos, aparatos y productos de la vez anterior.
 3. **¿Cuándo?** Por defecto es hoy (botones «Hoy» / «Ayer»). La hora es opcional.
@@ -102,6 +102,28 @@ La app tiene 3 sectores, siempre visibles en el menú (a la izquierda en la comp
 En **Sesiones cargadas** ves todas las sesiones, podés buscarlas, **editarlas** o **eliminarlas** (siempre pide
 confirmación). Si querés salir con una sesión a medio cargar, la app te avisa.
 
+### Ficha inicial de cada clienta
+
+Cuando cargás una clienta nueva (desde «Sesión de hoy» o desde Clientas → Nueva clienta) se completa su **ficha
+inicial**, igual a la «Ficha de Tratamiento y Anamnesis» en papel (el «Tratamiento en Gabinete» ya lo cubren las
+sesiones):
+
+1. **Datos personales**: nombre y apellido, fecha de nacimiento (calcula la edad), género, teléfono, email y fecha del
+   último tratamiento (o «Nunca se hizo un tratamiento»).
+2. **Historia clínica y hábitos**: alergias (cuáles, o «No tiene alergias»), hábitos (alcohol, cigarrillo, drogas,
+   café), cuidados domiciliarios (limpieza, exfoliación, humectantes, hidratantes, protección solar), y además
+   medicación, antecedentes y ejercicio.
+3. **Tipo de piel** y **escala de Fitzpatrick** (tipos I a VI, con la descripción de cada uno).
+4. **Análisis facial**: capilares visibles, glándulas sebáceas, pigmentación y líneas / surcos.
+5. **Condiciones del paciente**: las 21 de la ficha (marcapasos, embarazo, lactancia, diabetes, etc.).
+6. **Otros datos**: campos propios y notas.
+
+Para guardar una clienta nueva hay que responder **todos** los puntos: en los de casillas, si no hay nada que marcar se
+elige «Ninguno», «Ninguna» o «Sin hallazgos». Abajo se ve el avance («Ficha: 9 de 13»). Las clientas cargadas antes de
+esta función se marcan con **«Ficha incompleta»** y se pueden completar con «Editar ficha»; al editarlas se puede
+guardar igual aunque falte algo. Lo que ya estaba cargado se pasó solo a su lugar nuevo («¿Fuma?» → Hábitos /
+Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
+
 ### 2. Panel y clientas — historial y análisis
 
 - **Resumen**: elegí el período (este mes, últimos 3 meses, este año, etc.) y vas a ver cantidad de sesiones, clientas
@@ -109,8 +131,10 @@ confirmación). Si querés salir con una sesión a medio cargar, la app te avisa
   tratamientos/aparatos/productos más usados, clientas por tipo de piel y un **análisis cruzado** (qué tratamientos
   hacés más según el tipo de piel y qué productos combinás con cada tratamiento). Cada gráfico tiene «Ver como tabla».
 - **Clientas**: buscador, orden (última visita, más sesiones, nombre…) y filtros para ver las que **hace mucho no
-  vienen** (más de 60 días, se cambia en Ajustes) y las que tienen **próxima sesión** (pendiente o vencida).
-- **Ficha de cada clienta**: datos importantes destacados, resumen (cuántas sesiones, cada cuántos días viene,
+  vienen** (más de 60 días, se cambia en Ajustes), las que tienen **próxima sesión** (pendiente o vencida) y las que
+  tienen la **ficha inicial incompleta**.
+- **Pantalla de cada clienta**: datos importantes destacados (alergias, condiciones, medicación, piel), el **resumen
+  de su ficha inicial**, resumen (cuántas sesiones, cada cuántos días viene,
   tratamiento más frecuente, productos más usados con ella, total cobrado) y la **línea de tiempo** con todas sus
   sesiones y fotos. Desde ahí: **Registrar sesión** (ya con la clienta elegida) y **Editar ficha**.
 
@@ -148,7 +172,9 @@ confirmación). Si querés salir con una sesión a medio cargar, la app te avisa
   - `catalogs`: listas (predefinidas y propias). Todas funcionan igual: nombre, ícono, si se muestran en la sesión, si
     permiten varias opciones y detalle por opción.
   - `catalogItems`: opciones de cada lista (nombre, descripción, extras como la marca, activo/desactivado).
-  - `clients`: ficha de la clienta, con `customFields` para los campos propios.
+  - `clients`: ficha inicial de la clienta (datos personales, alergias, hábitos, cuidados domiciliarios, tipo de piel,
+    Fitzpatrick, análisis facial, condiciones) y `customFields` para los campos propios. Las opciones de la ficha están
+    en `src/lib/anamnesis.ts`.
   - `clientFields`: definición de los campos propios de la ficha.
   - `sessions`: fecha, hora, `selections` (por id de lista: opciones elegidas + detalle), recomendaciones,
     observaciones, próxima sesión, monto y pagado.

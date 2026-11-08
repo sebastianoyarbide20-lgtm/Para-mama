@@ -1,6 +1,7 @@
 import { db, nowISO } from './db';
 import { ensureDefaults } from './defaults';
-import { BUILTIN_KEYS, type Client, type Selections, type Session } from './types';
+import { BUILTIN_KEYS, type Client, type FacialAnalysis, type Selections, type Session } from './types';
+import { HOME_CARE, NONE } from '../lib/anamnesis';
 import { addDays, todayISO } from '../lib/dates';
 import { normalize } from '../lib/text';
 
@@ -114,10 +115,12 @@ interface SampleClient {
   birthDate: string;
   medication?: string;
   allergies?: string;
-  smokes?: Client['smokes'];
+  smokes?: 'si' | 'no' | 'ocasionalmente';
   exercises?: Client['exercises'];
   exerciseFrequency?: string;
-  pregnancy?: Client['pregnancy'];
+  pregnancy?: 'no' | 'embarazada' | 'lactancia';
+  /** Condiciones del paciente (claves de CONDITIONS). */
+  conditions?: string[];
   history?: string;
   notes?: string;
   /** Días desde la última visita (para simular clientas que hace mucho no vienen). */
@@ -155,6 +158,7 @@ const CLIENTS: SampleClient[] = [
     skin: 'Seca',
     birthDate: '1975-01-23',
     medication: 'Levotiroxina 50 mg',
+    conditions: ['tiroides'],
     smokes: 'no',
     exercises: 'si',
     exerciseFrequency: 'Camina todos los días',
@@ -209,6 +213,7 @@ const CLIENTS: SampleClient[] = [
     skin: 'Seca',
     birthDate: '1969-12-01',
     medication: 'Enalapril (presión)',
+    conditions: ['presion-alta'],
     smokes: 'no',
     exercises: 'si',
     exerciseFrequency: 'Natación',
@@ -258,6 +263,50 @@ const CLIENTS: SampleClient[] = [
     pregnancy: 'no',
   },
 ];
+
+/** Ficha inicial completa y verosímil para una clienta de ejemplo. */
+function sampleAnamnesis(sc: SampleClient, firstVisit: string, rand: () => number) {
+  const subset = (keys: string[], max: number) => {
+    const picked = keys.filter(() => rand() < 0.35).slice(0, max);
+    return picked.length ? picked : [NONE];
+  };
+  const habits: string[] = [];
+  if (sc.smokes === 'si' || sc.smokes === 'ocasionalmente') habits.push('cigarrillo');
+  if (rand() < 0.6) habits.push('cafe');
+  if (rand() < 0.25) habits.push('alcohol');
+
+  const conditions = [...(sc.conditions ?? [])];
+  if (sc.pregnancy === 'embarazada') conditions.push('embarazo');
+  if (sc.pregnancy === 'lactancia') conditions.push('lactancia');
+
+  const bySkin: Partial<Record<keyof FacialAnalysis, string[]>> =
+    sc.skin === 'Grasa' || sc.skin === 'Mixta'
+      ? { sebaceas: ['comedones', rand() < 0.5 ? 'pustulas' : 'papulas'] }
+      : sc.skin === 'Sensible'
+        ? { capilares: ['mejillas', 'eritema', 'cuperosidad'] }
+        : {};
+  const facial: FacialAnalysis = {
+    capilares: bySkin.capilares ?? subset(['nariz', 'mejillas', 'eritema'], 2),
+    sebaceas: bySkin.sebaceas ?? subset(['comedones', 'millium'], 1),
+    pigmentacion: subset(['hiperpigmentacion'], 1),
+    lineas: Number(sc.birthDate.slice(0, 4)) < 1990 ? ['superficiales', 'frontales', 'orbicular-ojos'] : [NONE],
+  };
+  const neverTreated = rand() < 0.3;
+  return {
+    gender: 'femenino' as const,
+    lastTreatmentDate: neverTreated ? '' : addDays(firstVisit, -(60 + Math.floor(rand() * 300))),
+    noPreviousTreatment: neverTreated,
+    noAllergies: !sc.allergies,
+    habits: habits.length ? habits : [NONE],
+    homeCare:
+      rand() < 0.15
+        ? [NONE]
+        : ['proteccion-solar', ...HOME_CARE.map((o) => o.key).filter((k) => k !== 'proteccion-solar' && rand() < 0.5)],
+    fitzpatrick: (['II', 'III', 'III', 'IV', 'II', 'III'] as const)[Math.floor(rand() * 6)]!,
+    facial,
+    conditions: conditions.length ? conditions : [NONE],
+  };
+}
 
 const SAMPLE_ZONES_KEY = 'custom-zonas-ejemplo';
 
@@ -350,11 +399,10 @@ export async function loadSampleData(): Promise<{ clients: number; sessions: num
         birthDate: sc.birthDate,
         skinTypeId,
         medication: sc.medication ?? '',
-        smokes: sc.smokes ?? '',
         exercises: sc.exercises ?? '',
         exerciseFrequency: sc.exerciseFrequency ?? '',
         allergies: sc.allergies ?? '',
-        pregnancy: sc.pregnancy ?? '',
+        ...sampleAnamnesis(sc, dates[0]!, rand),
         history: sc.history ?? '',
         notes: sc.notes ?? '',
         customFields: {},

@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
 import { RefreshCw, UserPlus } from 'lucide-react';
-import { clientName, useBuiltinCatalogs, useData, useSkinTypeName } from '../hooks/useData';
+import { clientName, useData, useSkinTypeName } from '../hooks/useData';
 import { createClient, emptyClient } from '../db/actions';
 import { matches, initials } from '../lib/text';
 import { formatDate, relativeDays } from '../lib/dates';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
-import { SearchInput, TextArea, TextField } from './ui/Fields';
+import { SearchInput } from './ui/Fields';
 import { useToast } from './ui/Feedback';
-import { CatalogPicker } from './CatalogPicker';
+import { ClientForm } from './ClientForm';
 
 export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
   const sizes = { sm: 'size-9 text-sm', md: 'size-11 text-base', lg: 'size-16 text-2xl' };
@@ -156,7 +156,7 @@ export function ClientPicker({
         </>
       )}
 
-      <QuickClientModal
+      <NewClientModal
         open={quickOpen}
         initialName={query}
         onClose={() => setQuickOpen(false)}
@@ -170,8 +170,8 @@ export function ClientPicker({
   );
 }
 
-/** Alta rápida: nombre, teléfono y tipo de piel. El resto se completa después en la ficha. */
-export function QuickClientModal({
+/** Alta de clienta desde la sesión: se completa la ficha inicial y queda elegida. */
+export function NewClientModal({
   open,
   onClose,
   onCreated,
@@ -182,94 +182,31 @@ export function QuickClientModal({
   onCreated: (id: number) => void;
   initialName?: string;
 }) {
+  const toast = useToast();
+  const [firstGuess, ...rest] = initialName.trim().split(/\s+/);
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Nueva clienta"
-      description="Cargá lo básico ahora. El resto de la ficha lo podés completar después."
+      title="Nueva clienta · Ficha inicial"
+      description="Completá la ficha y guardala: la clienta queda elegida para la sesión."
+      size="xl"
     >
-      <QuickClientForm initialName={initialName} onCancel={onClose} onCreated={onCreated} />
+      <ClientForm
+        inModal
+        initial={{ ...emptyClient(), firstName: firstGuess ?? '', lastName: rest.join(' ') }}
+        submitLabel="Guardar y elegir"
+        onCancel={onClose}
+        onSubmit={async (input) => {
+          try {
+            const id = await createClient(input);
+            toast.success(`¡Listo! ${`${input.firstName} ${input.lastName}`.trim()} ya está cargada`);
+            onCreated(id);
+          } catch {
+            toast.error('No se pudo guardar la clienta. Probá de nuevo.');
+          }
+        }}
+      />
     </Modal>
-  );
-}
-
-function QuickClientForm({
-  initialName,
-  onCancel,
-  onCreated,
-}: {
-  initialName: string;
-  onCancel: () => void;
-  onCreated: (id: number) => void;
-}) {
-  const toast = useToast();
-  const { itemsByCatalog } = useData();
-  const { skinTypes } = useBuiltinCatalogs();
-  const [firstGuess, ...rest] = initialName.trim().split(/\s+/);
-  const [firstName, setFirstName] = useState(firstGuess ?? '');
-  const [lastName, setLastName] = useState(rest.join(' '));
-  const [phone, setPhone] = useState('');
-  const [skinTypeId, setSkinTypeId] = useState<number | null>(null);
-  const [allergies, setAllergies] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!firstName.trim()) {
-      setError('Escribí al menos el nombre.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const id = await createClient({ ...emptyClient(), firstName, lastName, phone, skinTypeId, allergies });
-      toast.success(`¡Listo! ${`${firstName} ${lastName}`.trim()} ya está cargada`);
-      onCreated(id);
-    } catch {
-      toast.error('No se pudo guardar la clienta. Probá de nuevo.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} className="space-y-4" noValidate>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label="Nombre"
-          required
-          value={firstName}
-          onValueChange={(v) => {
-            setFirstName(v);
-            setError(null);
-          }}
-          error={error}
-          autoFocus
-          autoComplete="off"
-        />
-        <TextField label="Apellido" value={lastName} onValueChange={setLastName} autoComplete="off" />
-      </div>
-      <TextField label="Teléfono" type="tel" inputMode="tel" value={phone} onValueChange={setPhone} />
-      {skinTypes && (
-        <CatalogPicker
-          bare
-          catalog={skinTypes}
-          label="Tipo de piel"
-          items={itemsByCatalog.get(skinTypes.id!) ?? []}
-          value={skinTypeId ? [{ itemId: skinTypeId }] : []}
-          onChange={(v) => setSkinTypeId(v[0]?.itemId ?? null)}
-        />
-      )}
-      <TextArea label="Alergias" optional value={allergies} onValueChange={setAllergies} rows={2} />
-      <div className="flex flex-wrap-reverse justify-end gap-2 pt-2">
-        <Button variant="secondary" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit" variant="success" disabled={saving} icon={<UserPlus className="size-5" />}>
-          {saving ? 'Guardando…' : 'Guardar y elegir'}
-        </Button>
-      </div>
-    </form>
   );
 }

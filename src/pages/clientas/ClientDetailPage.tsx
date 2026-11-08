@@ -1,37 +1,20 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  Cake,
-  CalendarClock,
-  CalendarPlus,
-  ChevronLeft,
-  Dumbbell,
-  Mail,
-  Pencil,
-  Phone,
-  Trash2,
-  Cigarette,
-  Pill,
-  TriangleAlert,
-  Baby,
-  NotebookPen,
-  Stethoscope,
-  Flower2,
-} from 'lucide-react';
+import { CalendarClock, CalendarPlus, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
 import { deleteClient } from '../../db/actions';
 import type { Session } from '../../db/types';
 import { deleteSession } from '../../db/actions';
 import { clientName, useBuiltinCatalogs, useData, useSkinTypeName } from '../../hooks/useData';
-import { ageFromBirthDate, formatDate, formatDateTime, relativeDays, todayISO } from '../../lib/dates';
+import { ageFromBirthDate, formatDate, relativeDays, todayISO } from '../../lib/dates';
 import { formatMoney, formatNumber, plural } from '../../lib/format';
 import { averageDaysBetweenVisits, isInactive, nextSessionStatus, ranking, sortSessionsDesc } from '../../lib/stats';
-import { Badge, Card, EmptyState, InfoRow, PageHeader } from '../../components/ui/Card';
+import { Badge, Card, EmptyState, PageHeader } from '../../components/ui/Card';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { useConfirm, useToast } from '../../components/ui/Feedback';
 import { Avatar } from '../../components/ClientPicker';
 import { ClientAlerts } from '../../components/ClientAlerts';
 import { SessionCard } from '../../components/SessionCard';
-import { labelOf, PREGNANCY_OPTIONS, SMOKES_OPTIONS, YES_NO_OPTIONS } from '../../components/ClientForm';
+import { AnamnesisSummary } from '../../components/AnamnesisSummary';
 
 export function ClientDetailPage() {
   const { id } = useParams();
@@ -39,7 +22,7 @@ export function ClientDetailPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
-  const { clientsById, sessions, clientStats, clientFields, itemsById, settings } = useData();
+  const { clientsById, sessions, clientStats, itemsById, settings } = useData();
   const { treatments, products, devices } = useBuiltinCatalogs();
   const skinName = useSkinTypeName();
   const client = clientsById.get(clientId);
@@ -102,17 +85,6 @@ export function ClientDetailPage() {
     await deleteSession(s.id!);
     toast.success('Sesión eliminada');
   };
-
-  const customRows = clientFields
-    .map((f) => {
-      const v = client.customFields?.[String(f.id)];
-      if (v === undefined || v === '') return null;
-      let text = String(v);
-      if (f.type === 'yesno') text = v === 'si' || v === true ? 'Sí' : 'No';
-      if (f.type === 'date') text = formatDate(String(v));
-      return { label: f.label, text };
-    })
-    .filter((r): r is { label: string; text: string } => r !== null);
 
   return (
     <div>
@@ -184,6 +156,8 @@ export function ClientDetailPage() {
             <ClientAlerts client={client} />
           </Card>
 
+          <AnamnesisSummary client={client} />
+
           <Card title="Resumen">
             <dl className="grid grid-cols-2 gap-3">
               <Stat label="Sesiones" value={String(history.length)} />
@@ -200,74 +174,6 @@ export function ClientDetailPage() {
             {topTreatments.length > 0 && <TopList title="Tratamiento más frecuente" rows={topTreatments} />}
             {topProducts.length > 0 && <TopList title="Productos más usados con ella" rows={topProducts} />}
             {topDevices.length > 0 && <TopList title="Aparatología más usada" rows={topDevices} />}
-          </Card>
-
-          <Card title="Ficha">
-            <dl className="divide-y divide-stone-100">
-              {client.phone && (
-                <InfoRow label="Teléfono" icon={<Phone />}>
-                  <a
-                    href={`tel:${client.phone.replace(/[^\d+]/g, '')}`}
-                    className="font-semibold text-rosa-700 underline underline-offset-2"
-                  >
-                    {client.phone}
-                  </a>
-                </InfoRow>
-              )}
-              {client.email && (
-                <InfoRow label="Email" icon={<Mail />}>
-                  <a href={`mailto:${client.email}`} className="text-rosa-700 underline underline-offset-2">
-                    {client.email}
-                  </a>
-                </InfoRow>
-              )}
-              {client.birthDate && (
-                <InfoRow label="Fecha de nacimiento" icon={<Cake />}>
-                  {formatDate(client.birthDate)} {age !== null && `(${age} años)`}
-                </InfoRow>
-              )}
-              <InfoRow label="Tipo de piel" icon={<Flower2 />}>
-                {skinName(client) || <Missing />}
-              </InfoRow>
-              <InfoRow label="Medicación / pastillas" icon={<Pill />}>
-                {client.medication || <Missing text="No toma / sin cargar" />}
-              </InfoRow>
-              <InfoRow label="Alergias" icon={<TriangleAlert />}>
-                {client.allergies || <Missing text="Ninguna / sin cargar" />}
-              </InfoRow>
-              <InfoRow label="¿Fuma?" icon={<Cigarette />}>
-                {labelOf(SMOKES_OPTIONS, client.smokes) || <Missing />}
-              </InfoRow>
-              <InfoRow label="¿Hace ejercicio?" icon={<Dumbbell />}>
-                {client.exercises ? (
-                  <>
-                    {labelOf(YES_NO_OPTIONS, client.exercises)}
-                    {client.exercises === 'si' && client.exerciseFrequency && ` · ${client.exerciseFrequency}`}
-                  </>
-                ) : (
-                  <Missing />
-                )}
-              </InfoRow>
-              <InfoRow label="Embarazo / lactancia" icon={<Baby />}>
-                {labelOf(PREGNANCY_OPTIONS, client.pregnancy) || <Missing />}
-              </InfoRow>
-              {client.history && (
-                <InfoRow label="Antecedentes" icon={<Stethoscope />}>
-                  {client.history}
-                </InfoRow>
-              )}
-              {customRows.map((r) => (
-                <InfoRow key={r.label} label={r.label}>
-                  {r.text}
-                </InfoRow>
-              ))}
-              {client.notes && (
-                <InfoRow label="Notas" icon={<NotebookPen />}>
-                  {client.notes}
-                </InfoRow>
-              )}
-            </dl>
-            <p className="mt-3 text-xs text-stone-400">Cargada el {formatDateTime(client.createdAt)}</p>
           </Card>
 
           <Button
@@ -345,8 +251,4 @@ function TopList({ title, rows }: { title: string; rows: { id: number; name: str
       </ul>
     </div>
   );
-}
-
-function Missing({ text = 'Sin cargar' }: { text?: string }) {
-  return <span className="text-stone-400">{text}</span>;
 }

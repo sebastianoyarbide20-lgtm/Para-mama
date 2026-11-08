@@ -11,16 +11,20 @@ import { ClientFieldModal, FIELD_TYPE_LABELS } from '../../components/ClientFiel
 
 const FIXED_FIELDS = [
   'Nombre y apellido',
-  'Teléfono',
-  'Email',
-  'Fecha de nacimiento',
-  'Tipo de piel',
-  'Medicación / pastillas',
+  'Fecha de nacimiento y edad',
+  'Género',
+  'Teléfono y email',
+  'Fecha del último tratamiento',
   'Alergias',
-  'Embarazo / lactancia',
-  'Antecedentes relevantes',
-  '¿Fuma?',
-  '¿Hace ejercicio? (y frecuencia)',
+  'Hábitos',
+  'Cuidados domiciliarios',
+  'Medicación',
+  'Antecedentes',
+  'Ejercicio',
+  'Tipo de piel',
+  'Escala de Fitzpatrick',
+  'Análisis facial',
+  'Condiciones del paciente',
   'Notas generales',
 ];
 
@@ -120,7 +124,7 @@ export function ClientFieldsPage() {
         )}
       </Card>
 
-      <Card title="Campos que ya vienen en la ficha" subtitle="Estos están siempre.">
+      <Card title="Lo que ya trae la ficha inicial" subtitle="Estos puntos están siempre.">
         <ul className="flex flex-wrap gap-2">
           {FIXED_FIELDS.map((f) => (
             <li key={f} className="rounded-full bg-stone-100 px-3 py-1 text-stone-700">

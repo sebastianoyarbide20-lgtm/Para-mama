@@ -6,9 +6,23 @@ import { BUILTIN_KEYS } from './types';
 import { toCSV, type CSVCell } from '../lib/csv';
 import { formatDate, todayISO } from '../lib/dates';
 import { sortSessionsDesc } from '../lib/stats';
+import {
+  anamnesisMissing,
+  CONDITIONS,
+  FACIAL_GROUPS,
+  fitzpatrickInfo,
+  genderLabel,
+  HABITS,
+  hasNone,
+  HOME_CARE,
+  labelsOf,
+  normalizeClient,
+  type Option,
+} from '../lib/anamnesis';
 
 export const BACKUP_APP_ID = 'mi-cabina';
-export const BACKUP_VERSION = 1;
+/** v2: clientas con ficha inicial (anamnesis). Las copias v1 se adaptan al restaurar. */
+export const BACKUP_VERSION = 2;
 
 export interface BackupData {
   catalogs: Catalog[];
@@ -135,7 +149,7 @@ export async function restoreBackup(backup: BackupFile, options: { keepCurrentPh
     const d = backup.data;
     await db.catalogs.bulkAdd(d.catalogs);
     await db.catalogItems.bulkAdd(d.catalogItems);
-    await db.clients.bulkAdd(d.clients);
+    await db.clients.bulkAdd(d.clients.map((c) => normalizeClient(c as unknown as Record<string, unknown>)));
     await db.clientFields.bulkAdd(d.clientFields);
     await db.sessions.bulkAdd(d.sessions);
     if (!keepPhotos) await db.photos.bulkAdd(d.photos);
@@ -213,14 +227,10 @@ export async function clientsCSV(): Promise<string> {
     db.clients.toArray(),
     db.clientFields.orderBy('order').toArray(),
   ]);
-  const smokes: Record<string, string> = { si: 'Sí', no: 'No', ocasionalmente: 'Ocasionalmente', '': '' };
   const yesNo: Record<string, string> = { si: 'Sí', no: 'No', '': '' };
-  const pregnancy: Record<string, string> = {
-    no: 'No',
-    embarazada: 'Embarazada',
-    lactancia: 'En lactancia',
-    'no-aplica': 'No aplica',
-    '': '',
+  const list = (options: Option[], keys: string[] | undefined, none: string) => {
+    const labels = labelsOf(options, keys);
+    return labels.length ? labels.join(', ') : hasNone(keys) ? none : '';
   };
   const rows: CSVCell[][] = [
     [
@@ -229,34 +239,47 @@ export async function clientsCSV(): Promise<string> {
       'Teléfono',
       'Email',
       'Fecha de nacimiento',
-      'Tipo de piel',
+      'Género',
+      'Último tratamiento',
+      'Alergias',
+      'Hábitos',
+      'Cuidados domiciliarios',
       'Medicación',
-      'Fuma',
       'Hace ejercicio',
       'Frecuencia de ejercicio',
-      'Alergias',
-      'Embarazo / lactancia',
       'Antecedentes',
+      'Tipo de piel',
+      'Fitzpatrick',
+      ...FACIAL_GROUPS.map((g) => g.label),
+      'Condiciones del paciente',
+      'Ficha inicial',
       'Notas',
       ...fields.map((f) => f.label),
       'Fecha de alta',
     ],
   ];
   for (const c of [...clients].sort((a, b) => a.firstName.localeCompare(b.firstName, 'es'))) {
+    const missing = anamnesisMissing(c);
     rows.push([
       c.firstName,
       c.lastName,
       c.phone,
       c.email,
       formatDate(c.birthDate),
-      c.skinTypeId ? (itemsById.get(c.skinTypeId)?.name ?? '') : '',
+      genderLabel(c.gender),
+      c.noPreviousTreatment ? 'Nunca' : formatDate(c.lastTreatmentDate),
+      c.allergies || (c.noAllergies ? 'No tiene' : ''),
+      list(HABITS, c.habits, 'Ninguno'),
+      list(HOME_CARE, c.homeCare, 'Ninguno'),
       c.medication,
-      smokes[c.smokes] ?? '',
       yesNo[c.exercises] ?? '',
       c.exerciseFrequency,
-      c.allergies,
-      pregnancy[c.pregnancy] ?? '',
       c.history,
+      c.skinTypeId ? (itemsById.get(c.skinTypeId)?.name ?? '') : '',
+      fitzpatrickInfo(c.fitzpatrick)?.label ?? '',
+      ...FACIAL_GROUPS.map((g) => list(g.options, c.facial?.[g.key], 'Sin hallazgos')),
+      list(CONDITIONS, c.conditions, 'Ninguna'),
+      missing.length ? `Incompleta (falta: ${missing.map((m) => m.label).join(', ')})` : 'Completa',
       c.notes,
       ...fields.map((f) => {
         const v = c.customFields?.[String(f.id)];

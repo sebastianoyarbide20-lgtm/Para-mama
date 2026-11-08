@@ -122,7 +122,7 @@ export function HomePage() {
               },
               {
                 n: 2,
-                text: 'Cargá tu primera clienta (o hacelo directo al registrar la sesión).',
+                text: 'Cargá tu primera clienta con su ficha inicial (o hacelo directo al registrar la sesión).',
                 to: '/clientas/nueva',
                 cta: 'Nueva clienta',
               },

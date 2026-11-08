@@ -48,14 +48,17 @@ export function ClientEditPage() {
             <ChevronLeft className="size-5" aria-hidden /> Volver
           </Link>
         }
-        title={client ? `Ficha de ${clientName(client)}` : 'Nueva clienta'}
+        title={client ? `Ficha inicial de ${clientName(client)}` : 'Nueva clienta · Ficha inicial'}
         subtitle={
-          client ? 'Modificá lo que necesites y guardá.' : 'Completá lo que sepas. Solo el nombre es obligatorio.'
+          client
+            ? 'Modificá lo que necesites y guardá.'
+            : 'Completá todos los puntos de la ficha. Los marcados con * son obligatorios.'
         }
       />
       <ClientForm
         key={editingId ?? 'new'}
         initial={initial}
+        mode={client ? 'edit' : 'create'}
         submitLabel={client ? 'Guardar cambios' : 'Guardar clienta'}
         onCancel={() => navigate(-1)}
         onSubmit={async (input) => {
