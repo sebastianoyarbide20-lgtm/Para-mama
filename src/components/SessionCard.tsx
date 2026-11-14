@@ -37,6 +37,9 @@ export function SessionSelections({ session, compact = false }: { session: Sessi
               >
                 {itemsById.get(sel.itemId)?.name ?? 'Ítem eliminado'}
                 {sel.detail && <span className="ml-1 font-normal text-stone-600">({sel.detail})</span>}
+                {typeof sel.price === 'number' && (
+                  <span className="ml-1.5 font-bold text-salvia-800 tabular-nums">{formatMoney(sel.price)}</span>
+                )}
               </span>
             ))}
           </dd>
@@ -115,6 +118,13 @@ export function SessionCard({
       </header>
 
       <SessionSelections session={session} />
+      {typeof session.extraCharge === 'number' && (
+        <p className="mt-2 text-sm text-stone-700">
+          <span className="font-bold text-stone-500">Otros cobros: </span>
+          {session.extraChargeNote ? `${session.extraChargeNote} · ` : ''}
+          <span className="font-bold text-salvia-800">{formatMoney(session.extraCharge)}</span>
+        </p>
+      )}
 
       {(session.homeRecommendations || session.observations || session.nextSessionDate) && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

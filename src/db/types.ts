@@ -27,6 +27,8 @@ export interface Catalog {
   allowMultiple: boolean;
   /** ¿Cada ítem elegido puede llevar un detalle (ej: concentración, cantidad)? */
   allowDetail: boolean;
+  /** ¿Se anota cuánto se cobró por cada opción elegida en la sesión? */
+  allowPrice: boolean;
   /** ¿Aparece como campo en el formulario de sesión? (Tipos de piel no). */
   showInSession: boolean;
   /** Campos extra de cada ítem. */
@@ -117,6 +119,8 @@ export interface ClientField {
 export interface SessionSelection {
   itemId: number;
   detail?: string;
+  /** Lo que se le cobró a esta clienta por esta opción en esta sesión (no hay precios fijos). */
+  price?: number | null;
 }
 
 /** Selecciones de la sesión, agrupadas por id de catálogo (como string). */
@@ -134,7 +138,11 @@ export interface Session {
   observations: string;
   /** yyyy-mm-dd (opcional) */
   nextSessionDate: string;
+  /** Total de la sesión: suma de los montos de cada opción + otros cobros. */
   price: number | null;
+  /** Otro cobro que no corresponde a una opción de las listas (o el total de sesiones viejas sin detalle). */
+  extraCharge: number | null;
+  extraChargeNote: string;
   paid: boolean;
   createdAt: string;
   updatedAt: string;

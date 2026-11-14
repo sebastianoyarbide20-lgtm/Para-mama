@@ -3,6 +3,8 @@ import { Check, Plus, X } from 'lucide-react';
 import type { Catalog, CatalogItem, SessionSelection } from '../db/types';
 import { createItem } from '../db/actions';
 import { normalize, compareEs } from '../lib/text';
+import { formatMoney, parseMoneyInput } from '../lib/format';
+import { formatDate } from '../lib/dates';
 import { SearchInput } from './ui/Fields';
 import { useToast } from './ui/Feedback';
 
@@ -20,6 +22,10 @@ export function CatalogPicker({
   usage,
   label,
   bare = false,
+  prices,
+  onPriceChange,
+  priceHint,
+  showMissingPrices = false,
 }: {
   catalog: Catalog;
   items: CatalogItem[];
@@ -30,7 +36,15 @@ export function CatalogPicker({
   label?: string;
   /** Sin tarjeta alrededor (para usar dentro de otro formulario). */
   bare?: boolean;
+  /** Monto escrito para cada ítem elegido (texto, por id de ítem). Solo si el catálogo permite precio. */
+  prices?: Record<number, string>;
+  onPriceChange?: (itemId: number, text: string) => void;
+  /** Último monto que se le cobró a esta clienta por el ítem (solo como sugerencia). */
+  priceHint?: (itemId: number) => { price: number; date: string } | null;
+  /** Resaltar los ítems elegidos que todavía no tienen monto. */
+  showMissingPrices?: boolean;
 }) {
+  const withPrice = catalog.allowPrice && !!onPriceChange;
   const toast = useToast();
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -126,28 +140,56 @@ export function CatalogPicker({
         )}
       </div>
 
-      {/* Ítems elegidos (con detalle opcional) */}
-      {value.length > 0 && catalog.allowDetail && (
+      {/* Ítems elegidos (con detalle y/o monto cobrado) */}
+      {value.length > 0 && (catalog.allowDetail || withPrice) && (
         <ul className="mb-3 space-y-2" aria-label="Elegidos">
           {value.map((sel) => {
             const item = itemsById.get(sel.itemId);
+            const name = item?.name ?? 'Ítem eliminado';
+            const priceText = prices?.[sel.itemId] ?? '';
+            const parsed = parseMoneyInput(priceText);
+            const invalid = priceText.trim() !== '' && parsed === null;
+            const missing = withPrice && showMissingPrices && priceText.trim() === '';
+            const hint = withPrice && priceText.trim() === '' ? priceHint?.(sel.itemId) : null;
             return (
               <li
                 key={sel.itemId}
-                className="flex flex-wrap items-center gap-2 rounded-xl bg-rosa-50 p-2 sm:flex-nowrap"
+                className={`flex flex-wrap items-center gap-2 rounded-xl bg-rosa-50 p-2 ${missing ? 'ring-2 ring-amber-400' : ''}`}
               >
-                <span className="flex min-w-0 flex-1 items-center gap-2 pl-1 font-semibold text-rosa-900">
+                <span className="flex min-w-0 flex-1 basis-40 items-center gap-2 pl-1 font-semibold text-rosa-900">
                   <Check className="size-4 shrink-0" aria-hidden />
-                  <span className="truncate">{item?.name ?? 'Ítem eliminado'}</span>
+                  <span className="truncate">{name}</span>
                 </span>
-                <input
-                  type="text"
-                  value={sel.detail ?? ''}
-                  onChange={(e) => setDetail(sel.itemId, e.target.value)}
-                  placeholder="Detalle (ej: 20%, 2 ml)"
-                  aria-label={`Detalle de ${item?.name ?? 'ítem'}`}
-                  className="input-base order-3 w-full py-2 sm:order-none sm:w-56"
-                />
+                {catalog.allowDetail && (
+                  <input
+                    type="text"
+                    value={sel.detail ?? ''}
+                    onChange={(e) => setDetail(sel.itemId, e.target.value)}
+                    placeholder="Detalle (ej: 20%, 2 ml)"
+                    aria-label={`Detalle de ${name}`}
+                    className="input-base w-full py-2 sm:w-48"
+                  />
+                )}
+                {withPrice && (
+                  <span className="relative w-[calc(100%-3rem)] sm:w-40">
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 font-semibold text-stone-500"
+                    >
+                      $
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={priceText}
+                      onChange={(e) => onPriceChange!(sel.itemId, e.target.value)}
+                      placeholder="¿Cuánto?"
+                      aria-label={`Monto cobrado por ${name}`}
+                      aria-invalid={invalid || undefined}
+                      className={`input-base py-2 pl-7 ${invalid ? 'input-error' : ''}`}
+                    />
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => toggle(sel.itemId)}
@@ -156,6 +198,25 @@ export function CatalogPicker({
                 >
                   <X className="size-5" />
                 </button>
+                {(hint || invalid || missing) && (
+                  <p className="w-full pl-7 text-sm">
+                    {invalid ? (
+                      <span className="font-semibold text-red-700">Escribí solo números. Ej: 25000</span>
+                    ) : hint ? (
+                      <button
+                        type="button"
+                        onClick={() => onPriceChange!(sel.itemId, String(hint.price))}
+                        className="font-semibold text-rosa-800 underline underline-offset-2"
+                      >
+                        La última vez le cobraste {formatMoney(hint.price)} ({formatDate(hint.date)}) · usar este monto
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-amber-800">
+                        Falta el monto (poné 0 si no se cobró aparte)
+                      </span>
+                    )}
+                  </p>
+                )}
               </li>
             );
           })}

@@ -1,7 +1,18 @@
 import { db, nowISO } from './db';
 import { ensureDefaults } from './defaults';
-import type { AppSettings, Catalog, CatalogItem, Client, ClientField, Photo, Selections, Session } from './types';
+import type {
+  AppSettings,
+  Catalog,
+  CatalogItem,
+  Client,
+  ClientField,
+  Photo,
+  Selections,
+  Session,
+  SessionSelection,
+} from './types';
 import { normalize } from '../lib/text';
+import { computeSessionTotal } from '../lib/finance';
 
 /* --------------------------------- Ajustes --------------------------------- */
 
@@ -13,7 +24,7 @@ export async function saveSetting<K extends keyof AppSettings>(key: K, value: Ap
 
 export type CatalogInput = Pick<
   Catalog,
-  'name' | 'sessionLabel' | 'description' | 'allowMultiple' | 'allowDetail' | 'showInSession' | 'icon'
+  'name' | 'sessionLabel' | 'description' | 'allowMultiple' | 'allowDetail' | 'allowPrice' | 'showInSession' | 'icon'
 >;
 
 export async function createCatalog(input: CatalogInput): Promise<number> {
@@ -227,12 +238,18 @@ export interface NewPhoto {
   dataUrl: string;
 }
 
-function cleanSelections(selections: Selections): Selections {
+function cleanSelections(selections: Selections, catalogs: Map<number, Catalog>): Selections {
   const result: Selections = {};
   for (const [key, list] of Object.entries(selections)) {
+    const allowPrice = catalogs.get(Number(key))?.allowPrice ?? false;
     const cleaned = list
       .filter((s) => typeof s.itemId === 'number')
-      .map((s) => (s.detail?.trim() ? { itemId: s.itemId, detail: s.detail.trim() } : { itemId: s.itemId }));
+      .map((s) => {
+        const out: SessionSelection = { itemId: s.itemId };
+        if (s.detail?.trim()) out.detail = s.detail.trim();
+        if (allowPrice && typeof s.price === 'number' && Number.isFinite(s.price)) out.price = s.price;
+        return out;
+      });
     if (cleaned.length) result[key] = cleaned;
   }
   return result;
@@ -244,9 +261,14 @@ export async function saveSession(
   photos: { added: NewPhoto[]; removedIds: number[]; kindChanges?: Record<number, Photo['kind']> },
 ): Promise<number> {
   const now = nowISO();
+  const catalogs = new Map((await db.catalogs.toArray()).map((c) => [c.id!, c]));
+  const selections = cleanSelections(input.selections, catalogs);
   const data = {
     ...input,
-    selections: cleanSelections(input.selections),
+    selections,
+    // El total siempre se calcula a partir de los montos anotados.
+    price: computeSessionTotal(selections, input.extraCharge),
+    extraChargeNote: input.extraChargeNote.trim(),
     homeRecommendations: input.homeRecommendations.trim(),
     observations: input.observations.trim(),
   };
@@ -277,6 +299,11 @@ export async function saveSession(
     await db.photos.where('sessionId').equals(sessionId).modify({ clientId: input.clientId });
     return sessionId;
   });
+}
+
+/** Marca una sesión como pagada (o no). */
+export async function setSessionPaid(id: number, paid: boolean) {
+  await db.sessions.update(id, { paid, updatedAt: nowISO() });
 }
 
 export async function deleteSession(id: number) {

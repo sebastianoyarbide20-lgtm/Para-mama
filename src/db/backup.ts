@@ -6,6 +6,7 @@ import { BUILTIN_KEYS } from './types';
 import { toCSV, type CSVCell } from '../lib/csv';
 import { formatDate, todayISO } from '../lib/dates';
 import { sortSessionsDesc } from '../lib/stats';
+import { chargeLines, normalizeCatalog, normalizeSession } from '../lib/finance';
 import {
   anamnesisMissing,
   CONDITIONS,
@@ -21,8 +22,8 @@ import {
 } from '../lib/anamnesis';
 
 export const BACKUP_APP_ID = 'mi-cabina';
-/** v2: clientas con ficha inicial (anamnesis). Las copias v1 se adaptan al restaurar. */
-export const BACKUP_VERSION = 2;
+/** v2: ficha inicial (anamnesis). v3: monto por opción en cada sesión. Las copias viejas se adaptan al restaurar. */
+export const BACKUP_VERSION = 3;
 
 export interface BackupData {
   catalogs: Catalog[];
@@ -147,11 +148,11 @@ export async function restoreBackup(backup: BackupFile, options: { keepCurrentPh
       await db.table(name).clear();
     }
     const d = backup.data;
-    await db.catalogs.bulkAdd(d.catalogs);
+    await db.catalogs.bulkAdd(d.catalogs.map((c) => normalizeCatalog(c as unknown as Record<string, unknown>)));
     await db.catalogItems.bulkAdd(d.catalogItems);
     await db.clients.bulkAdd(d.clients.map((c) => normalizeClient(c as unknown as Record<string, unknown>)));
     await db.clientFields.bulkAdd(d.clientFields);
-    await db.sessions.bulkAdd(d.sessions);
+    await db.sessions.bulkAdd(d.sessions.map((x) => normalizeSession(x as unknown as Record<string, unknown>)));
     if (!keepPhotos) await db.photos.bulkAdd(d.photos);
     await db.settings.bulkPut(d.settings);
   });
@@ -191,7 +192,9 @@ export async function sessionsCSV(from: string | null = null, to: string | null 
     'Recomendaciones para casa',
     'Observaciones',
     'Próxima sesión',
-    'Monto',
+    'Otros cobros',
+    'Detalle otros cobros',
+    'Monto total',
     'Pagado',
   ];
   const rows: CSVCell[][] = [header];
@@ -207,13 +210,16 @@ export async function sessionsCSV(from: string | null = null, to: string | null 
         (s.selections?.[String(c.id)] ?? [])
           .map((sel) => {
             const name = itemsById.get(sel.itemId)?.name ?? 'Ítem eliminado';
-            return sel.detail ? `${name} (${sel.detail})` : name;
+            const withDetail = sel.detail ? `${name} (${sel.detail})` : name;
+            return typeof sel.price === 'number' ? `${withDetail} $${sel.price}` : withDetail;
           })
           .join(', '),
       ),
       s.homeRecommendations,
       s.observations,
       formatDate(s.nextSessionDate),
+      typeof s.extraCharge === 'number' ? s.extraCharge : '',
+      s.extraChargeNote ?? '',
       typeof s.price === 'number' ? s.price : '',
       typeof s.price === 'number' ? s.paid : '',
     ]);
@@ -289,6 +295,28 @@ export async function clientsCSV(): Promise<string> {
         return v as CSVCell;
       }),
       formatDate(c.createdAt.slice(0, 10)),
+    ]);
+  }
+  return toCSV(rows);
+}
+
+/** Cada monto cobrado como una fila (para analizar en Excel). */
+export async function chargesCSV(from: string | null = null, to: string | null = null): Promise<string> {
+  const { catalogs, itemsById, clientsById } = await loadLookups();
+  const sessions = (await db.sessions.toArray()).filter((s) => (!from || s.date >= from) && (!to || s.date <= to));
+  const lines = chargeLines(sortSessionsDesc(sessions), new Map(catalogs.map((c) => [c.id!, c])), itemsById);
+  const byId = new Map(sessions.map((s) => [s.id!, s]));
+  const rows: CSVCell[][] = [['Fecha', 'Clienta', 'Lista', 'Concepto', 'Monto', 'Pagado']];
+  for (const l of lines) {
+    const client = clientsById.get(l.clientId);
+    const note = l.itemId === null ? byId.get(l.sessionId)?.extraChargeNote : '';
+    rows.push([
+      formatDate(l.date),
+      client ? `${client.firstName} ${client.lastName}`.trim() : 'Clienta eliminada',
+      l.catalogName,
+      note ? `${l.name}: ${note}` : l.name,
+      l.amount,
+      l.paid,
     ]);
   }
   return toCSV(rows);

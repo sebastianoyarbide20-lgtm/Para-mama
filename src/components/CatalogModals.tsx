@@ -52,6 +52,7 @@ function CatalogForm({
     description: catalog?.description ?? '',
     allowMultiple: catalog?.allowMultiple ?? true,
     allowDetail: catalog?.allowDetail ?? false,
+    allowPrice: catalog?.allowPrice ?? true,
     showInSession: catalog?.showInSession ?? true,
     icon: catalog?.icon ?? '📋',
   });
@@ -153,6 +154,12 @@ function CatalogForm({
             description="Por ejemplo concentración, cantidad o tiempo."
             checked={form.allowDetail}
             onChange={(v) => set('allowDetail', v)}
+          />
+          <Toggle
+            label="Anotar cuánto se cobró por cada opción"
+            description="En cada sesión se pregunta el monto de cada opción elegida."
+            checked={form.allowPrice}
+            onChange={(v) => set('allowPrice', v)}
           />
         </div>
       )}

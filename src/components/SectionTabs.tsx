@@ -16,7 +16,7 @@ export function SectionTabs({ tabs }: { tabs: { to: string; label: string; icon:
             }`
           }
         >
-          <Icon className="size-5 shrink-0" aria-hidden />
+          <Icon className="hidden size-5 shrink-0 min-[400px]:block" aria-hidden />
           {label}
         </NavLink>
       ))}

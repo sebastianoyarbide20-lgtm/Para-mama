@@ -8,6 +8,7 @@ import { clientName, useData } from '../../hooks/useData';
 import { addDays, formatDate, formatDateLong, nowTime, todayISO } from '../../lib/dates';
 import { formatMoney, parseMoneyInput } from '../../lib/format';
 import { countSelections } from '../../lib/stats';
+import { lastPriceForClient } from '../../lib/finance';
 import { Card, PageHeader, Spinner, EmptyState } from '../../components/ui/Card';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { TextArea, TextField, Toggle } from '../../components/ui/Fields';
@@ -27,9 +28,24 @@ interface FormState {
   homeRecommendations: string;
   observations: string;
   nextSessionDate: string;
-  priceText: string;
+  /** Monto escrito para cada opción elegida, por "catálogo:ítem". */
+  prices: Record<string, string>;
+  /** Otros cobros que no son una opción de las listas. */
+  extraText: string;
+  extraNote: string;
   paid: boolean;
   photos: EditablePhoto[];
+}
+
+const priceKey = (catalogId: number | string, itemId: number) => `${catalogId}:${itemId}`;
+
+/** Montos (texto) de las opciones de una sesión guardada. */
+function pricesFromSelections(selections: Selections): Record<string, string> {
+  const prices: Record<string, string> = {};
+  for (const [catKey, list] of Object.entries(selections ?? {})) {
+    for (const sel of list) if (typeof sel.price === 'number') prices[priceKey(catKey, sel.itemId)] = String(sel.price);
+  }
+  return prices;
 }
 
 function emptyForm(clientId: number | null, date = todayISO()): FormState {
@@ -41,7 +57,9 @@ function emptyForm(clientId: number | null, date = todayISO()): FormState {
     homeRecommendations: '',
     observations: '',
     nextSessionDate: '',
-    priceText: '',
+    prices: {},
+    extraText: '',
+    extraNote: '',
     paid: true,
     photos: [],
   };
@@ -95,7 +113,9 @@ function EditSessionLoader({ sessionId }: { sessionId: number }) {
           homeRecommendations: session.homeRecommendations ?? '',
           observations: session.observations ?? '',
           nextSessionDate: session.nextSessionDate ?? '',
-          priceText: typeof session.price === 'number' ? String(session.price) : '',
+          prices: pricesFromSelections(session.selections),
+          extraText: typeof session.extraCharge === 'number' ? String(session.extraCharge) : '',
+          extraNote: session.extraChargeNote ?? '',
           paid: session.paid ?? false,
           photos: photos.map((p) => ({ id: p.id, key: `db-${p.id}`, kind: p.kind, dataUrl: p.dataUrl })),
         },
@@ -132,11 +152,12 @@ function SessionForm({
   const navigate = useNavigate();
   const toast = useToast();
   const confirm = useConfirm();
-  const { sessionCatalogs, itemsByCatalog, sessions, clientsById } = useData();
+  const { sessionCatalogs, itemsByCatalog, itemsById, sessions, clientsById } = useData();
 
   const [form, setForm] = useState<FormState>(initial);
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial));
   const [errors, setErrors] = useState<{ client?: string; date?: string; price?: string }>({});
+  const [showMissingPrices, setShowMissingPrices] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<{ sessionId: number; clientId: number } | null>(null);
   const skipBlockRef = useRef(false);
@@ -177,12 +198,41 @@ function SessionForm({
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
+  // Cobro: cada opción elegida (de las listas que piden monto) con lo que se escribió.
+  const charges = useMemo(() => {
+    const rows: { key: string; catalogName: string; name: string; text: string; amount: number | null }[] = [];
+    for (const catalog of sessionCatalogs) {
+      if (!catalog.allowPrice) continue;
+      for (const sel of form.selections[String(catalog.id)] ?? []) {
+        const key = priceKey(catalog.id!, sel.itemId);
+        const text = form.prices[key] ?? '';
+        rows.push({
+          key,
+          catalogName: catalog.name,
+          name: itemsById.get(sel.itemId)?.name ?? 'Ítem eliminado',
+          text,
+          amount: parseMoneyInput(text),
+        });
+      }
+    }
+    return rows;
+  }, [sessionCatalogs, form.selections, form.prices, itemsById]);
+  const extraAmount = parseMoneyInput(form.extraText);
+  const total =
+    charges.some((c) => c.amount !== null) || extraAmount !== null
+      ? charges.reduce((a, c) => a + (c.amount ?? 0), 0) + (extraAmount ?? 0)
+      : null;
+  const missingCharges = charges.filter((c) => !c.text.trim());
+  const invalidCharges = charges.filter((c) => c.text.trim() && c.amount === null);
+
   const duplicateFrom = (session: Session) => {
     setForm((f) => ({
       ...f,
       selections: structuredClone(session.selections ?? {}),
       homeRecommendations: session.homeRecommendations || f.homeRecommendations,
-      priceText: typeof session.price === 'number' ? String(session.price) : f.priceText,
+      prices: pricesFromSelections(session.selections),
+      extraText: typeof session.extraCharge === 'number' ? String(session.extraCharge) : '',
+      extraNote: session.extraChargeNote ?? '',
     }));
     toast.info('Copiamos la última sesión. Revisá y cambiá lo que haga falta.');
   };
@@ -192,6 +242,7 @@ function SessionForm({
     setForm(fresh);
     setBaseline(JSON.stringify(fresh));
     setErrors({});
+    setShowMissingPrices(false);
     setSaved(null);
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -200,11 +251,11 @@ function SessionForm({
     const nextErrors: typeof errors = {};
     if (!form.clientId) nextErrors.client = 'Elegí una clienta (o creá una nueva) para poder guardar.';
     if (!form.date) nextErrors.date = 'Poné la fecha de la sesión.';
-    const price = parseMoneyInput(form.priceText);
-    if (form.priceText.trim() && price === null) nextErrors.price = 'Escribí el monto solo con números. Ej: 25000';
+    if (invalidCharges.length || (form.extraText.trim() && extraAmount === null))
+      nextErrors.price = 'Hay montos mal escritos. Usá solo números, por ejemplo 25000.';
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
-      const firstId = nextErrors.client ? 'paso-clienta' : nextErrors.date ? 'paso-fecha' : 'paso-extras';
+      const firstId = nextErrors.client ? 'paso-clienta' : nextErrors.date ? 'paso-fecha' : 'paso-cobro';
       document.getElementById(firstId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       toast.error('Falta completar algo. Revisá lo marcado en rojo.');
       return;
@@ -222,18 +273,55 @@ function SessionForm({
       if (!ok) return;
     }
 
+    // No hay precios fijos: se pregunta cuánto se cobró por cada opción elegida.
+    if (missingCharges.length) {
+      setShowMissingPrices(true);
+      const ok = await confirm({
+        title: '¿Cuánto cobraste?',
+        message: (
+          <>
+            <p>Falta anotar el monto de:</p>
+            <ul className="mt-2 list-inside list-disc font-semibold">
+              {missingCharges.map((c) => (
+                <li key={c.key}>
+                  {c.name} <span className="font-normal text-stone-500">({c.catalogName})</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2">
+              Si no se cobró aparte, poné 0. ¿Querés guardar igual? Esas opciones quedan sin monto y no suman en los
+              ingresos.
+            </p>
+          </>
+        ),
+        confirmLabel: 'Guardar sin esos montos',
+        cancelLabel: 'Completar montos',
+      });
+      if (!ok) {
+        document.getElementById('paso-tratamientos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const input: SessionInput = {
         clientId: form.clientId!,
         date: form.date,
         time: form.time,
-        selections: form.selections,
+        selections: Object.fromEntries(
+          Object.entries(form.selections).map(([catKey, list]) => [
+            catKey,
+            list.map((sel) => ({ ...sel, price: parseMoneyInput(form.prices[priceKey(catKey, sel.itemId)] ?? '') })),
+          ]),
+        ),
         homeRecommendations: form.homeRecommendations,
         observations: form.observations,
         nextSessionDate: form.nextSessionDate,
-        price,
-        paid: price === null ? false : form.paid,
+        price: total,
+        extraCharge: extraAmount,
+        extraChargeNote: extraAmount === null ? '' : form.extraNote,
+        paid: total === null ? false : form.paid,
       };
       const initialPhotoIds = initial.photos.filter((p) => p.id).map((p) => p.id!);
       const keptIds = new Set(form.photos.filter((p) => p.id).map((p) => p.id!));
@@ -286,8 +374,6 @@ function SessionForm({
   if (saved) {
     return <SavedView saved={saved} onAnother={resetForAnother} />;
   }
-
-  const price = parseMoneyInput(form.priceText);
 
   return (
     <div ref={topRef} className="scroll-mt-20">
@@ -382,6 +468,19 @@ function SessionForm({
                 usage={usage.get(catalog.id!)}
                 value={form.selections[String(catalog.id)] ?? []}
                 onChange={(v) => setForm((f) => ({ ...f, selections: { ...f.selections, [String(catalog.id)]: v } }))}
+                prices={Object.fromEntries(
+                  (form.selections[String(catalog.id)] ?? []).map((sel) => [
+                    sel.itemId,
+                    form.prices[priceKey(catalog.id!, sel.itemId)] ?? '',
+                  ]),
+                )}
+                onPriceChange={(itemId, text) =>
+                  setForm((f) => ({ ...f, prices: { ...f.prices, [priceKey(catalog.id!, itemId)]: text } }))
+                }
+                priceHint={(itemId) =>
+                  form.clientId ? lastPriceForClient(sessions, form.clientId, catalog.id!, itemId, editingId) : null
+                }
+                showMissingPrices={showMissingPrices}
               />
             ))}
             <p className="px-1 text-sm text-stone-500">
@@ -413,8 +512,89 @@ function SessionForm({
           </Card>
 
           <Card
+            id="paso-cobro"
+            title={<StepTitle n={5}>Cobro</StepTitle>}
+            subtitle="Se suma solo con lo que anotaste en cada opción."
+            className="scroll-mt-24"
+          >
+            {charges.length === 0 ? (
+              <p className="text-stone-600">
+                Cuando elijas tratamientos, aparatos o productos, acá vas a ver lo que cobraste por cada uno.
+              </p>
+            ) : (
+              <ul className="divide-y divide-stone-100 rounded-xl ring-1 ring-stone-200">
+                {charges.map((c) => (
+                  <li key={c.key} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-stone-800">{c.name}</span>
+                      <span className="block text-sm text-stone-500">{c.catalogName}</span>
+                    </span>
+                    <span
+                      className={`shrink-0 font-bold tabular-nums ${
+                        c.amount !== null ? 'text-stone-900' : c.text.trim() ? 'text-red-700' : 'text-amber-700'
+                      }`}
+                    >
+                      {c.amount !== null ? formatMoney(c.amount) : c.text.trim() ? 'Revisar' : 'Sin monto'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-[12rem_1fr]">
+              <TextField
+                label="Otros cobros"
+                optional
+                inputMode="decimal"
+                value={form.extraText}
+                onValueChange={(v) => {
+                  set('extraText', v);
+                  if (errors.price) setErrors((er) => ({ ...er, price: undefined }));
+                }}
+                placeholder="Ej: 5000"
+                error={form.extraText.trim() && extraAmount === null ? 'Solo números' : null}
+              />
+              <TextField
+                label="¿Qué fue?"
+                optional
+                value={form.extraNote}
+                onValueChange={(v) => set('extraNote', v)}
+                placeholder="Ej: crema que se llevó, seña, recargo…"
+              />
+            </div>
+
+            {errors.price && (
+              <p role="alert" className="mt-3 font-semibold text-red-700">
+                {errors.price}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-crema p-4">
+              <div>
+                <p className="text-sm font-bold text-stone-500">Total de la sesión</p>
+                <p className="text-3xl font-extrabold text-stone-900 tabular-nums">
+                  {total !== null ? formatMoney(total) : '–'}
+                </p>
+                {missingCharges.length > 0 && (
+                  <p className="text-sm font-semibold text-amber-800">
+                    Falta el monto de {missingCharges.length} {missingCharges.length === 1 ? 'opción' : 'opciones'}
+                  </p>
+                )}
+              </div>
+              {total !== null && (
+                <Toggle
+                  label={form.paid ? 'Pagado' : 'Falta pagar'}
+                  description="Tocá para cambiar"
+                  checked={form.paid}
+                  onChange={(v) => set('paid', v)}
+                />
+              )}
+            </div>
+          </Card>
+
+          <Card
             id="paso-extras"
-            title={<StepTitle n={5}>Extras</StepTitle>}
+            title={<StepTitle n={6}>Extras</StepTitle>}
             subtitle="Todo esto es opcional."
             className="scroll-mt-24"
           >
@@ -444,31 +624,6 @@ function SessionForm({
                   })}
                   {form.nextSessionDate && <QuickChip onClick={() => set('nextSessionDate', '')}>Quitar</QuickChip>}
                 </div>
-              </div>
-
-              <div className="grid items-start gap-4 sm:grid-cols-2">
-                <TextField
-                  label="Monto cobrado"
-                  inputMode="decimal"
-                  value={form.priceText}
-                  onValueChange={(v) => {
-                    set('priceText', v);
-                    if (errors.price) setErrors((er) => ({ ...er, price: undefined }));
-                  }}
-                  placeholder="Ej: 25000"
-                  error={errors.price}
-                  hint={price !== null ? formatMoney(price) : undefined}
-                />
-                {form.priceText.trim() && (
-                  <div className="sm:pt-8">
-                    <Toggle
-                      label={form.paid ? 'Pagado' : 'Falta pagar'}
-                      description="Tocá para cambiar"
-                      checked={form.paid}
-                      onChange={(v) => set('paid', v)}
-                    />
-                  </div>
-                )}
               </div>
 
               <div>

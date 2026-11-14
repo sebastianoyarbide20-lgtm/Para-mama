@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import type { Catalog, CatalogItem, Client, ClientField, Photo, Session, SettingRow } from './types';
 import { normalizeClient } from '../lib/anamnesis';
+import { normalizeCatalog, normalizeSession } from '../lib/finance';
 
 /**
  * Base de datos local (IndexedDB) del navegador.
@@ -39,6 +40,23 @@ export class CabinaDB extends Dexie {
             Object.assign(client, normalized);
           }),
       );
+    // v3: monto cobrado por cada opción de la sesión. Las sesiones viejas pasan su total a "otros cobros".
+    this.version(3)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('catalogs')
+          .toCollection()
+          .modify((c: Record<string, unknown>) => {
+            Object.assign(c, normalizeCatalog(c));
+          });
+        await tx
+          .table('sessions')
+          .toCollection()
+          .modify((s: Record<string, unknown>) => {
+            Object.assign(s, normalizeSession(s));
+          });
+      });
   }
 }
 

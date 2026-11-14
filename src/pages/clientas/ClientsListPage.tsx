@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarClock, ChartColumn, ChevronRight, ClipboardList, Clock, UserPlus, Users } from 'lucide-react';
+import { Wallet, CalendarClock, ChartColumn, ChevronRight, ClipboardList, Clock, UserPlus, Users } from 'lucide-react';
 import { isAnamnesisComplete } from '../../lib/anamnesis';
 import type { Client } from '../../db/types';
 import { clientName, useData, useSkinTypeName } from '../../hooks/useData';
@@ -16,6 +16,7 @@ import { SectionTabs } from '../../components/SectionTabs';
 
 export const PANEL_TABS = [
   { to: '/panel', label: 'Resumen', icon: ChartColumn, end: true },
+  { to: '/panel/ingresos', label: 'Ingresos', icon: Wallet },
   { to: '/clientas', label: 'Clientas', icon: Users },
 ];
 

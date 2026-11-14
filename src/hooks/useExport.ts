@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { backupFileName, buildBackup, clientsCSV, markBackupDone, sessionsCSV } from '../db/backup';
+import { backupFileName, buildBackup, chargesCSV, clientsCSV, markBackupDone, sessionsCSV } from '../db/backup';
 import { downloadFile } from '../lib/csv';
 import { todayISO } from '../lib/dates';
 import { useToast } from '../components/ui/Feedback';
@@ -63,6 +63,21 @@ export function useExport() {
     [toast],
   );
 
+  const exportCharges = useCallback(
+    async (from: string | null = null, to: string | null = null) => {
+      try {
+        const csv = await chargesCSV(from, to);
+        const suffix = from || to ? (from ?? 'inicio') + '_a_' + (to ?? todayISO()) : todayISO();
+        downloadFile('cobros-' + suffix + '.csv', csv, 'text/csv;charset=utf-8');
+        toast.success('Planilla de cobros descargada (se abre con Excel).');
+      } catch (e) {
+        console.error(e);
+        toast.error('No se pudo exportar.');
+      }
+    },
+    [toast],
+  );
+
   const exportClients = useCallback(async () => {
     try {
       const csv = await clientsCSV();
@@ -74,5 +89,5 @@ export function useExport() {
     }
   }, [toast]);
 
-  return { exportBackup, exportSessions, exportClients };
+  return { exportBackup, exportSessions, exportClients, exportCharges };
 }

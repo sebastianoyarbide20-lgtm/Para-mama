@@ -2,6 +2,7 @@ import { db, nowISO } from './db';
 import { ensureDefaults } from './defaults';
 import { BUILTIN_KEYS, type Client, type FacialAnalysis, type Selections, type Session } from './types';
 import { HOME_CARE, NONE } from '../lib/anamnesis';
+import { computeSessionTotal } from '../lib/finance';
 import { addDays, todayISO } from '../lib/dates';
 import { normalize } from '../lib/text';
 
@@ -348,6 +349,7 @@ export async function loadSampleData(): Promise<{ clients: number; sessions: num
         builtIn: false,
         allowMultiple: true,
         allowDetail: false,
+        allowPrice: false,
         showInSession: true,
         extraFields: [],
         icon: '📍',
@@ -412,6 +414,9 @@ export async function loadSampleData(): Promise<{ clients: number; sessions: num
       });
       created.clients++;
 
+      // Cada clienta paga distinto: no hay precios fijos.
+      const factor = 0.85 + rand() * 0.35;
+      const money = (base: number) => Math.round((base * factor * (0.95 + rand() * 0.15)) / 500) * 500;
       const sessions: Session[] = [];
       for (let i = 0; i < dates.length; i++) {
         const isLast = i === dates.length - 1;
@@ -424,30 +429,34 @@ export async function loadSampleData(): Promise<{ clients: number; sessions: num
         const deviceNames = new Set<string>();
         const productPairs = new Map<string, string | undefined>();
         const zoneNames = new Set<string>();
-        let price = 0;
         for (const t of treatmentNames) {
           const spec = TREATMENTS[t]!;
           spec.devices.forEach((d) => rand() < 0.75 && deviceNames.add(d));
           spec.products.forEach(([p, detail]) => rand() < 0.7 && productPairs.set(p, detail));
           zoneNames.add(spec.zones[0]!);
           spec.zones.slice(1).forEach((z) => rand() < 0.35 && zoneNames.add(z));
-          price += spec.price;
         }
         selections[String(treatmentsCat.id)] = await Promise.all(
-          treatmentNames.map(async (n) => ({ itemId: await itemId(treatmentsCat.id!, n) })),
+          treatmentNames.map(async (n) => ({
+            itemId: await itemId(treatmentsCat.id!, n),
+            price: money(TREATMENTS[n]!.price),
+          })),
         );
         if (deviceNames.size) {
           selections[String(devicesCat.id)] = await Promise.all(
-            [...deviceNames].map(async (n) => ({ itemId: await itemId(devicesCat.id!, n) })),
+            [...deviceNames].map(async (n) => ({
+              itemId: await itemId(devicesCat.id!, n),
+              price: rand() < 0.5 ? 0 : money(4000),
+            })),
           );
         }
         if (productPairs.size) {
           selections[String(productsCat.id)] = await Promise.all(
-            [...productPairs].map(async ([n, detail]) =>
-              detail
-                ? { itemId: await itemId(productsCat.id!, n), detail }
-                : { itemId: await itemId(productsCat.id!, n) },
-            ),
+            [...productPairs].map(async ([n, detail]) => ({
+              itemId: await itemId(productsCat.id!, n),
+              ...(detail ? { detail } : {}),
+              price: rand() < 0.4 ? 0 : money(4500),
+            })),
           );
         }
         selections[String(zonesCat.id)] = await Promise.all(
@@ -470,7 +479,9 @@ export async function loadSampleData(): Promise<{ clients: number; sessions: num
           homeRecommendations: pick(RECOMMENDATIONS),
           observations: pick(OBSERVATIONS),
           nextSessionDate,
-          price: rand() < 0.92 ? Math.round((price * (0.9 + rand() * 0.25)) / 500) * 500 : null,
+          price: computeSessionTotal(selections, null),
+          extraCharge: null,
+          extraChargeNote: '',
           paid: isLast ? rand() < 0.6 : rand() < 0.95,
           createdAt: `${dates[i]}T${String(hour).padStart(2, '0')}:00:00.000Z`,
           updatedAt: now,

@@ -23,6 +23,8 @@ function session(partial: Partial<Session> & Pick<Session, 'clientId' | 'date'>)
     observations: '',
     nextSessionDate: '',
     price: null,
+    extraCharge: null,
+    extraChargeNote: '',
     paid: false,
     createdAt: `${partial.date}T10:00:00.000Z`,
     updatedAt: `${partial.date}T10:00:00.000Z`,

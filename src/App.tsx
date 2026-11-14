@@ -63,6 +63,10 @@ const router = createHashRouter([
         // Los gráficos se cargan solo cuando se abre el panel (la app arranca más rápido).
         lazy: async () => ({ Component: (await import('./pages/panel/DashboardPage')).DashboardPage }),
       },
+      {
+        path: 'panel/ingresos',
+        lazy: async () => ({ Component: (await import('./pages/panel/IncomePage')).IncomePage }),
+      },
       { path: 'clientas', element: <ClientsListPage /> },
       { path: 'clientas/nueva', element: <ClientEditPage /> },
       { path: 'clientas/:id', element: <ClientDetailPage /> },

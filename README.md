@@ -93,11 +93,15 @@ La app tiene 3 sectores, siempre visibles en el menú (a la izquierda en la comp
 3. **¿Cuándo?** Por defecto es hoy (botones «Hoy» / «Ayer»). La hora es opcional.
 4. **¿Qué le hiciste?** Tocá los tratamientos, la aparatología y los líquidos/productos que usaste. Si falta alguno,
    escribilo en el buscador y tocá **Agregar «…»**. En los productos podés anotar un detalle (por ejemplo «20 %» o
-   «2 ml»).
+   «2 ml»). Al lado de cada opción elegida aparece **«¿Cuánto?»**: anotá cuánto le cobraste **a esa clienta** por esa
+   opción (no hay precios fijos; si no se cobró aparte, poné 0). Si ya le hiciste lo mismo antes, la app te muestra
+   «La última vez le cobraste $ …» y con un toque lo usás.
 5. **Para la casa y notas**: recomendaciones para hacer en casa y observaciones de la sesión.
-6. **Extras** (opcional): próxima sesión sugerida (botones +7, +15, +21, +30 días), monto cobrado y si está pagado, y
-   fotos de antes/después.
-7. Tocá **Guardar sesión**. Con **Guardar y cargar otra** el formulario queda listo para la siguiente clienta.
+6. **Cobro**: el detalle de lo cobrado por cada opción y el **total de la sesión**, que se suma solo. Podés agregar
+   **otros cobros** (por ejemplo una crema que se llevó) y marcar si está **pagado** o **falta pagar**. Si te olvidaste
+   el monto de alguna opción, al guardar la app te pregunta.
+7. **Extras** (opcional): próxima sesión sugerida (botones +7, +15, +21, +30 días) y fotos de antes/después.
+8. Tocá **Guardar sesión**. Con **Guardar y cargar otra** el formulario queda listo para la siguiente clienta.
 
 En **Sesiones cargadas** ves todas las sesiones, podés buscarlas, **editarlas** o **eliminarlas** (siempre pide
 confirmación). Si querés salir con una sesión a medio cargar, la app te avisa.
@@ -130,6 +134,12 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
   atendidas, clientas nuevas, ingresos (cobrado y lo que falta cobrar), gráficos de sesiones e ingresos en el tiempo,
   tratamientos/aparatos/productos más usados, clientas por tipo de piel y un **análisis cruzado** (qué tratamientos
   hacés más según el tipo de piel y qué productos combinás con cada tratamiento). Cada gráfico tiene «Ver como tabla».
+- **Ingresos**: cuánto cobraste en los **últimos 7 días**, los **últimos 30 días**, **este mes** y **este año** (con la
+  comparación contra el período anterior). Filtrás por período, por lista (tratamientos, aparatología, productos…), por
+  clienta o buscando un tratamiento, y ves: total, cobrado, lo que falta cobrar, promedio por sesión, ingresos por
+  semana o mes, **lo cobrado por cada tratamiento/aparato/producto** (veces, total, promedio y de cuánto a cuánto se
+  cobró; tocando una fila ves cada cobro con la clienta y la fecha), ingresos **por clienta** y la lista de sesiones que
+  **falta cobrar** (con el botón «Marcar pagada»). «Exportar cobros (CSV)» baja una fila por cada cobro para Excel.
 - **Clientas**: buscador, orden (última visita, más sesiones, nombre…) y filtros para ver las que **hace mucho no
   vienen** (más de 60 días, se cambia en Ajustes), las que tienen **próxima sesión** (pendiente o vencida) y las que
   tienen la **ficha inicial incompleta**.
@@ -176,7 +186,9 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
     Fitzpatrick, análisis facial, condiciones) y `customFields` para los campos propios. Las opciones de la ficha están
     en `src/lib/anamnesis.ts`.
   - `clientFields`: definición de los campos propios de la ficha.
-  - `sessions`: fecha, hora, `selections` (por id de lista: opciones elegidas + detalle), recomendaciones,
-    observaciones, próxima sesión, monto y pagado.
+  - `sessions`: fecha, hora, `selections` (por id de lista: opciones elegidas + detalle + **monto cobrado**),
+    recomendaciones, observaciones, próxima sesión, otros cobros, total (`price`, suma de los montos) y pagado. Las
+    sesiones cargadas antes del monto por opción conservan su total como «otros cobros». La lógica de ingresos está en
+    `src/lib/finance.ts`.
   - `photos`: fotos comprimidas de cada sesión (antes/después).
   - `settings`: preferencias.

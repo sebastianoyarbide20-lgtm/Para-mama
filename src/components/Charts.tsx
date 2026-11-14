@@ -96,6 +96,7 @@ function makeTooltip(format: (v: number) => string, labelOf?: (payload: unknown,
 }
 
 const compact = new Intl.NumberFormat('es-AR', { notation: 'compact', maximumFractionDigits: 1 });
+const moneyFormatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 
 /** Columnas a lo largo del tiempo (sesiones o ingresos por semana/mes). */
 export function TimeBarChart({
@@ -163,13 +164,16 @@ function useIsNarrow(breakpoint = 640): boolean {
 export function RankingChart({
   rows,
   unit = ['vez', 'veces'],
+  money = false,
 }: {
   rows: { name: string; count: number }[];
   /** [singular, plural] para el tooltip. */
   unit?: [string, string];
+  /** Los valores son pesos. */
+  money?: boolean;
 }) {
   const Tip = makeTooltip(
-    (v) => `${v} ${v === 1 ? unit[0] : unit[1]}`,
+    (v) => (money ? moneyFormatter.format(v) : `${v} ${v === 1 ? unit[0] : unit[1]}`),
     (p) => (p as { name: string }).name,
   );
   const narrow = useIsNarrow();
@@ -185,6 +189,7 @@ export function RankingChart({
             tickLine={false}
             axisLine={false}
             tick={{ fill: TICK, fontSize: 12 }}
+            tickFormatter={(v: number) => (money ? '$' + compact.format(v) : String(v))}
           />
           <YAxis
             type="category"

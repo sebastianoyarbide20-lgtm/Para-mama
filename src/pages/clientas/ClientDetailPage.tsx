@@ -171,6 +171,14 @@ export function ClientDetailPage() {
               {(stat?.totalSpent ?? 0) > 0 && <Stat label="Total cobrado" value={formatMoney(stat!.totalSpent)} />}
               {(stat?.unpaid ?? 0) > 0 && <Stat label="Falta pagar" value={formatMoney(stat!.unpaid)} warn />}
             </dl>
+            {((stat?.totalSpent ?? 0) > 0 || (stat?.unpaid ?? 0) > 0) && (
+              <Link
+                to={`/panel/ingresos?clienta=${clientId}&periodo=todo`}
+                className="mt-3 inline-block text-sm font-bold text-rosa-700 underline underline-offset-2"
+              >
+                Ver lo que se le cobró por cada tratamiento
+              </Link>
+            )}
             {topTreatments.length > 0 && <TopList title="Tratamiento más frecuente" rows={topTreatments} />}
             {topProducts.length > 0 && <TopList title="Productos más usados con ella" rows={topProducts} />}
             {topDevices.length > 0 && <TopList title="Aparatología más usada" rows={topDevices} />}
