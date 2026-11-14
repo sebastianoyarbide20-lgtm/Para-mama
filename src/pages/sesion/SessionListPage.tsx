@@ -54,7 +54,7 @@ export function SessionListPage() {
 
   return (
     <div>
-      <PageHeader title="Sesión de hoy" subtitle="Todas las sesiones que cargaste." />
+      <PageHeader eyebrow="Sesión de hoy" title="Sesiones cargadas" subtitle="Todas las sesiones que cargaste." />
       <SectionTabs tabs={SESSION_TABS} />
 
       {sessions.length === 0 ? (

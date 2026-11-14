@@ -1,18 +1,27 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
+  BellRing,
   CalendarCheck,
-  CalendarClock,
   CalendarPlus,
   ChevronRight,
   Clock,
   Database,
+  Droplet,
   FileSpreadsheet,
+  Flower2,
+  Layers,
+  ListChecks,
   Repeat,
+  Sparkles,
   UserPlus,
   Users,
   Wallet,
+  Zap,
 } from 'lucide-react';
+import type { Client } from '../../db/types';
+import type { ClientStat } from '../../lib/stats';
+import { Avatar } from '../../components/ClientPicker';
 import { clientName, useBuiltinCatalogs, useData } from '../../hooks/useData';
 import { useExport } from '../../hooks/useExport';
 import { formatDate, monthLabel, relativeDays, shortDayLabel, todayISO, addDays } from '../../lib/dates';
@@ -29,10 +38,10 @@ import {
   type CrossRow,
   type Granularity,
 } from '../../lib/stats';
-import { PageHeader, EmptyState, Card } from '../../components/ui/Card';
+import { Badge, PageHeader, EmptyState, Card, type Tone } from '../../components/ui/Card';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { Segmented, SelectField } from '../../components/ui/Fields';
-import { ChartCard, RankingChart, StatTile, TimeBarChart } from '../../components/Charts';
+import { BarList, ChartCard, StatTile, TimeBarChart } from '../../components/Charts';
 import {
   DateRangeFilter,
   PRESETS,
@@ -136,7 +145,7 @@ export function DashboardPage() {
   if (sessions.length === 0) {
     return (
       <div>
-        <PageHeader title="Panel y análisis" />
+        <PageHeader eyebrow="Panel" title="Resumen" />
         <SectionTabs tabs={PANEL_TABS} />
         <EmptyState
           icon={<CalendarPlus />}
@@ -160,127 +169,105 @@ export function DashboardPage() {
 
   const periodText =
     range.from || range.to
-      ? `${range.from ? formatDate(range.from) : 'el inicio'} al ${range.to ? formatDate(range.to) : 'hoy'}`
+      ? `Del ${range.from ? formatDate(range.from) : 'inicio'} al ${range.to ? formatDate(range.to) : 'hoy'}`
       : 'Todo el historial';
 
   return (
     <div>
       <PageHeader
-        title="Panel y análisis"
+        eyebrow="Panel"
+        title="Resumen"
         subtitle={periodText}
         actions={
-          <Button
-            variant="secondary"
-            icon={<FileSpreadsheet className="size-5" />}
-            onClick={() => void exportSessions(range.from, range.to)}
-          >
-            Exportar a Excel (CSV)
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={<Database className="size-4" />}
+              onClick={() => void exportBackup({ includePhotos: true })}
+            >
+              Copia completa
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<FileSpreadsheet className="size-4" />}
+              onClick={() => void exportSessions(range.from, range.to)}
+            >
+              Exportar a Excel (CSV)
+            </Button>
+          </>
         }
       />
       <SectionTabs tabs={PANEL_TABS} />
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         <DateRangeFilter preset={preset} custom={custom} onPreset={setPreset} onCustom={updateCustom} />
 
-        <section aria-label="Indicadores" className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-          <StatTile icon={<CalendarCheck />} label="Sesiones" value={String(kpis.totalSessions)} />
-          <StatTile icon={<Users />} label="Clientas atendidas" value={String(kpis.activeClients)} />
+        <section aria-label="Indicadores" className="stagger grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <StatTile
+            icon={<CalendarCheck />}
+            tone="rosa"
+            label="Sesiones"
+            value={String(kpis.totalSessions)}
+            amount={kpis.totalSessions}
+            format={(n) => String(n)}
+            spark={series.map((p) => p.sesiones)}
+          />
+          <StatTile
+            icon={<Users />}
+            tone="violet"
+            label="Clientas atendidas"
+            value={String(kpis.activeClients)}
+            amount={kpis.activeClients}
+            format={(n) => String(n)}
+          />
           <StatTile
             icon={<UserPlus />}
+            tone="sky"
             label="Clientas nuevas"
             value={String(kpis.newClients)}
+            amount={kpis.newClients}
+            format={(n) => String(n)}
             hint="Primera sesión en el período"
           />
           <StatTile
             icon={<Repeat />}
+            tone="amber"
             label="Sesiones por clienta"
             value={kpis.avgSessionsPerClient !== null ? formatNumber(kpis.avgSessionsPerClient) : '–'}
-            hint="Promedio"
+            hint="Promedio del período"
           />
-          <div className="col-span-2 md:col-span-4 xl:col-span-2">
-            <StatTile
-              icon={<Wallet />}
-              label="Ingresos"
-              value={kpis.sessionsWithPrice ? formatMoney(kpis.income) : '–'}
-              hint={
-                kpis.sessionsWithPrice ? (
-                  kpis.pending > 0 ? (
-                    <>
-                      Cobrado {formatMoney(kpis.collected)} ·{' '}
-                      <span className="font-bold text-amber-800">falta {formatMoney(kpis.pending)}</span>
-                    </>
-                  ) : (
-                    'Todo cobrado'
-                  )
+          <StatTile
+            className="col-span-2"
+            icon={<Wallet />}
+            tone="salvia"
+            label="Ingresos"
+            value={kpis.sessionsWithPrice ? formatMoney(kpis.income) : '–'}
+            amount={kpis.sessionsWithPrice ? kpis.income : undefined}
+            format={formatMoney}
+            spark={kpis.sessionsWithPrice ? series.map((p) => p.ingresos) : undefined}
+            hint={
+              kpis.sessionsWithPrice ? (
+                kpis.pending > 0 ? (
+                  <>
+                    Cobrado {formatMoney(kpis.collected)} ·{' '}
+                    <span className="font-semibold text-amber-700">falta {formatMoney(kpis.pending)}</span>
+                  </>
                 ) : (
-                  'Cargá montos en las sesiones'
+                  'Todo cobrado'
                 )
-              }
-            />
-          </div>
+              ) : (
+                'Cargá montos en las sesiones'
+              )
+            }
+          />
         </section>
 
-        {(upcoming.length > 0 || inactiveCount > 0) && (
-          <Card title="Para tener en cuenta">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <p className="mb-2 flex items-center gap-2 font-bold text-stone-700">
-                  <CalendarClock className="size-5 text-rosa-600" aria-hidden /> Próximas sesiones sugeridas
-                </p>
-                {upcoming.length === 0 ? (
-                  <p className="text-stone-500">No hay sesiones sugeridas para los próximos días.</p>
-                ) : (
-                  <ul className="divide-y divide-stone-100 rounded-xl ring-1 ring-stone-200">
-                    {upcoming.slice(0, 6).map(({ c, s }) => {
-                      const overdue = s!.nextSessionDate! < today;
-                      return (
-                        <li key={c.id}>
-                          <Link
-                            to={`/clientas/${c.id}`}
-                            className="flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-rosa-50/60"
-                          >
-                            <span className="font-semibold text-stone-900">{clientName(c)}</span>
-                            <span className={`text-sm font-semibold ${overdue ? 'text-red-700' : 'text-salvia-700'}`}>
-                              {formatDate(s!.nextSessionDate)} ·{' '}
-                              {overdue
-                                ? `vencida ${relativeDays(s!.nextSessionDate!, today)}`
-                                : relativeDays(s!.nextSessionDate!, today)}
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <Link
-                  to="/clientas?filtro=proximas"
-                  className="mt-2 inline-block text-sm font-bold text-rosa-700 underline underline-offset-2"
-                >
-                  Ver todas
-                </Link>
-              </div>
-              <Link
-                to="/clientas?filtro=inactivas"
-                className="flex items-center gap-3 self-start rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200 hover:bg-amber-100"
-              >
-                <Clock className="size-8 shrink-0 text-amber-700" aria-hidden />
-                <span className="flex-1">
-                  <span className="block text-2xl font-extrabold text-amber-950">{inactiveCount}</span>
-                  <span className="block font-semibold text-amber-900">
-                    {inactiveCount === 1 ? 'clienta hace' : 'clientas hace'} más de {settings.inactiveDays} días que no{' '}
-                    {inactiveCount === 1 ? 'viene' : 'vienen'}
-                  </span>
-                </span>
-                <ChevronRight className="size-6 text-amber-700" aria-hidden />
-              </Link>
-            </div>
-          </Card>
-        )}
-
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-3">
           <ChartCard
+            className="xl:col-span-2"
+            icon={<CalendarCheck />}
             title={granularity === 'week' ? 'Sesiones por semana' : 'Sesiones por mes'}
+            subtitle={`${plural(kpis.totalSessions, 'sesión', 'sesiones')} en el período`}
             empty={inRange.length === 0}
             actions={
               <Segmented
@@ -305,13 +292,34 @@ export function DashboardPage() {
               dataKey="sesiones"
               format={(v) => plural(v, 'sesión', 'sesiones')}
               tooltipLabel={(row) => bucketLabel(row.key)}
+              height={330}
             />
           </ChartCard>
 
+          <AttentionCard
+            upcoming={upcoming}
+            inactiveCount={inactiveCount}
+            inactiveDays={settings.inactiveDays}
+            today={today}
+          />
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-3">
           <ChartCard
+            className="xl:col-span-2"
+            icon={<Wallet />}
+            tone="salvia"
             title={granularity === 'week' ? 'Ingresos por semana' : 'Ingresos por mes'}
-            subtitle="Suma de los montos cargados en las sesiones"
+            subtitle="Suma de lo cobrado en las sesiones"
             empty={kpis.sessionsWithPrice === 0}
+            actions={
+              <Link
+                to="/panel/ingresos"
+                className="flex items-center gap-1 text-sm font-semibold text-rosa-700 hover:text-rosa-800"
+              >
+                Ver ingresos <ChevronRight className="size-4" aria-hidden />
+              </Link>
+            }
             table={{
               columns: [granularity === 'week' ? 'Semana' : 'Mes', 'Ingresos', 'Cobrado'],
               rows: series.map((p) => [
@@ -325,53 +333,72 @@ export function DashboardPage() {
               data={series}
               dataKey="ingresos"
               money
+              variant="area"
               format={(v) => formatMoney(v)}
               tooltipLabel={(row) => bucketLabel(row.key)}
+              height={260}
             />
           </ChartCard>
-
-          <RankingCard title="Tratamientos más realizados" rows={topTreatments} />
-          <RankingCard title="Aparatología más usada" rows={topDevices} />
-          <RankingCard title="Líquidos y productos más usados" rows={topProducts} />
           <RankingCard
             title="Clientas por tipo de piel"
             subtitle="Clientas atendidas en el período"
+            icon={<Flower2 />}
+            tone="violet"
             rows={skinRows}
             unit={['clienta', 'clientas']}
           />
-          {customCatalog && (
-            <RankingCard
-              title={`${customCatalog.name}: lo más elegido`}
-              rows={topCustom}
-              actions={
-                customCatalogs.length > 1 ? (
-                  <SelectField
-                    label={<span className="sr-only">Lista</span>}
-                    value={String(customCatalog.id)}
-                    onValueChange={(v) => setCustomId(Number(v))}
-                    className="py-1.5 text-sm"
-                  >
-                    {customCatalogs.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : undefined
-              }
-            />
-          )}
         </div>
 
+        <section aria-labelledby="rankings" className="space-y-3">
+          <h2 id="rankings" className="font-display text-xl font-semibold text-stone-900">
+            Lo más elegido
+          </h2>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <RankingCard title="Tratamientos más realizados" icon={<Sparkles />} rows={topTreatments} />
+            <RankingCard title="Aparatología más usada" icon={<Zap />} tone="sky" rows={topDevices} />
+            <RankingCard title="Líquidos y productos más usados" icon={<Droplet />} tone="salvia" rows={topProducts} />
+            {customCatalog && (
+              <RankingCard
+                title={`${customCatalog.name}: lo más elegido`}
+                icon={<ListChecks />}
+                tone="amber"
+                rows={topCustom}
+                actions={
+                  customCatalogs.length > 1 ? (
+                    <SelectField
+                      label={<span className="sr-only">Lista</span>}
+                      value={String(customCatalog.id)}
+                      onValueChange={(v) => setCustomId(Number(v))}
+                      className="h-9 text-sm"
+                    >
+                      {customCatalogs.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </SelectField>
+                  ) : undefined
+                }
+              />
+            )}
+          </div>
+        </section>
+
         <section aria-labelledby="cruces" className="space-y-3">
-          <h2 id="cruces" className="text-xl font-extrabold text-stone-900">
+          <h2 id="cruces" className="font-display text-xl font-semibold text-stone-900">
             Análisis cruzado
           </h2>
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Card title="Tratamientos según tipo de piel" subtitle="Qué tratamientos hacés más en cada tipo de piel">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card
+              icon={<Flower2 />}
+              tone="violet"
+              title="Tratamientos según tipo de piel"
+              subtitle="Qué tratamientos hacés más en cada tipo de piel"
+            >
               <CrossList rows={crossSkin} empty="Todavía no hay datos suficientes en este período." />
             </Card>
             <Card
+              icon={<Layers />}
               title="Qué se combina con cada tratamiento"
               subtitle={crossB ? `${crossB.name} que más usás junto a cada tratamiento` : undefined}
               actions={
@@ -380,7 +407,7 @@ export function DashboardPage() {
                     label={<span className="sr-only">Comparar con</span>}
                     value={String(crossB?.id ?? '')}
                     onValueChange={(v) => setCrossBId(Number(v))}
-                    className="py-1.5 text-sm"
+                    className="h-9 text-sm"
                   >
                     {crossTargets.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -396,25 +423,30 @@ export function DashboardPage() {
           </div>
         </section>
 
-        <Card title="Exportar datos" subtitle="Para abrir en Excel o guardar una copia de todo.">
+        <Card
+          icon={<FileSpreadsheet />}
+          tone="stone"
+          title="Exportar datos"
+          subtitle="Para abrir en Excel o guardar una copia de todo."
+        >
           <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"
-              icon={<FileSpreadsheet className="size-5" />}
+              icon={<FileSpreadsheet className="size-4" />}
               onClick={() => void exportSessions(range.from, range.to)}
             >
               Sesiones del período (CSV)
             </Button>
             <Button
               variant="secondary"
-              icon={<FileSpreadsheet className="size-5" />}
+              icon={<FileSpreadsheet className="size-4" />}
               onClick={() => void exportSessions()}
             >
               Todas las sesiones (CSV)
             </Button>
             <Button
               variant="secondary"
-              icon={<Database className="size-5" />}
+              icon={<Database className="size-4" />}
               onClick={() => void exportBackup({ includePhotos: true })}
             >
               Copia completa (JSON)
@@ -426,46 +458,131 @@ export function DashboardPage() {
   );
 }
 
+/** "Para tener en cuenta": próximas sesiones sugeridas y clientas que hace mucho no vienen. */
+function AttentionCard({
+  upcoming,
+  inactiveCount,
+  inactiveDays,
+  today,
+}: {
+  upcoming: { c: Client; s: ClientStat | undefined }[];
+  inactiveCount: number;
+  inactiveDays: number;
+  today: string;
+}) {
+  return (
+    <Card icon={<BellRing />} tone="amber" title="Para tener en cuenta" className="flex flex-col">
+      <p className="mb-2 text-xs font-bold tracking-wide text-stone-400 uppercase">Próximas sesiones sugeridas</p>
+      {upcoming.length === 0 ? (
+        <p className="rounded-xl bg-stone-50 p-3 text-sm text-stone-500">
+          No hay sesiones sugeridas para los próximos días.
+        </p>
+      ) : (
+        <ul className="-mx-2 space-y-0.5">
+          {upcoming.slice(0, 4).map(({ c, s }) => {
+            const overdue = s!.nextSessionDate! < today;
+            return (
+              <li key={c.id}>
+                <Link
+                  to={`/clientas/${c.id}`}
+                  className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-stone-50"
+                >
+                  <Avatar name={clientName(c)} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-stone-900">{clientName(c)}</span>
+                    <span className="block text-xs text-stone-500">{formatDate(s!.nextSessionDate)}</span>
+                  </span>
+                  <Badge tone={overdue ? 'red' : 'salvia'}>
+                    {overdue
+                      ? `vencida ${relativeDays(s!.nextSessionDate!, today)}`
+                      : relativeDays(s!.nextSessionDate!, today)}
+                  </Badge>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Link
+        to="/clientas?filtro=proximas"
+        className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-rosa-700 hover:text-rosa-800"
+      >
+        Ver todas <ChevronRight className="size-4" aria-hidden />
+      </Link>
+      {inactiveCount > 0 && (
+        <Link
+          to="/clientas?filtro=inactivas"
+          className="group mt-auto flex items-center gap-3 rounded-2xl bg-linear-to-br from-amber-50 to-orange-50 p-4 ring-1 ring-amber-200/70 transition-shadow hover:shadow-card-hover"
+          style={{ marginTop: 'auto' }}
+        >
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white text-amber-600 shadow-sm">
+            <Clock className="size-5" aria-hidden />
+          </span>
+          <span className="flex-1">
+            <span className="num block font-display text-2xl font-semibold text-amber-950">{inactiveCount}</span>
+            <span className="block text-sm font-medium text-amber-900">
+              {inactiveCount === 1 ? 'clienta hace' : 'clientas hace'} más de {inactiveDays} días que no{' '}
+              {inactiveCount === 1 ? 'viene' : 'vienen'}
+            </span>
+          </span>
+          <ChevronRight
+            className="size-5 text-amber-700 transition-transform group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </Link>
+      )}
+    </Card>
+  );
+}
+
 function RankingCard({
   title,
   subtitle,
   rows,
   unit,
   actions,
+  icon,
+  tone,
 }: {
   title: string;
   subtitle?: string;
   rows: { name: string; count: number }[];
   unit?: [string, string];
   actions?: React.ReactNode;
+  icon?: React.ReactNode;
+  tone?: Tone;
 }) {
+  const [one, many] = unit ?? ['vez', 'veces'];
   return (
-    <ChartCard
-      title={title}
-      subtitle={subtitle}
-      actions={actions}
-      empty={rows.length === 0}
-      table={{ columns: ['Nombre', unit ? 'Clientas' : 'Veces'], rows: rows.map((r) => [r.name, r.count]) }}
-    >
-      <RankingChart rows={rows} unit={unit} />
+    <ChartCard title={title} subtitle={subtitle} actions={actions} icon={icon} tone={tone} empty={rows.length === 0}>
+      <BarList
+        rows={rows.map((r, i) => ({ key: `${r.name}-${i}`, name: r.name, value: r.count }))}
+        format={(v) => `${v} ${v === 1 ? one : many}`}
+      />
     </ChartCard>
   );
 }
 
 function CrossList({ rows, empty }: { rows: CrossRow[]; empty: string }) {
-  if (rows.length === 0) return <p className="text-stone-500">{empty}</p>;
+  if (rows.length === 0) return <p className="rounded-xl bg-stone-50 p-4 text-sm text-stone-500">{empty}</p>;
   return (
-    <ul className="divide-y divide-stone-100">
+    <ul className="space-y-3">
       {rows.map((r) => (
-        <li key={r.id ?? 'none'} className="py-2.5">
-          <p className="font-bold text-stone-900">
-            {r.name}{' '}
-            <span className="text-sm font-semibold text-stone-500">· {plural(r.sessions, 'sesión', 'sesiones')}</span>
+        <li key={r.id ?? 'none'} className="rounded-2xl bg-stone-50/70 p-3.5 ring-1 ring-stone-900/[0.03]">
+          <p className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-stone-900">{r.name}</span>
+            <span className="text-xs font-semibold text-stone-500">{plural(r.sessions, 'sesión', 'sesiones')}</span>
           </p>
-          <ul className="mt-1 flex flex-wrap gap-1.5">
+          <ul className="mt-2 flex flex-wrap gap-1.5">
             {r.top.map((t) => (
-              <li key={t.id} className="rounded-full bg-stone-100 px-2.5 py-0.5 text-sm font-semibold text-stone-800">
-                {t.name} <span className="font-normal text-stone-500">×{t.count}</span>
+              <li
+                key={t.id}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white py-0.5 pr-1 pl-2.5 text-[0.8rem] font-medium text-stone-700 shadow-[0_1px_2px_rgb(61_21_34/0.06)] ring-1 ring-stone-900/5"
+              >
+                {t.name}
+                <span className="num rounded-full bg-rosa-50 px-1.5 text-[0.7rem] font-bold text-rosa-700">
+                  {t.count}
+                </span>
               </li>
             ))}
           </ul>

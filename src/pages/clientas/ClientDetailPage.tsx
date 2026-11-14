@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarClock, CalendarPlus, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
+import {
+  CalendarClock,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Flower2,
+  Pencil,
+  Phone,
+  ShieldAlert,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
+import { fitzpatrickInfo } from '../../lib/anamnesis';
 import { deleteClient } from '../../db/actions';
 import type { Session } from '../../db/types';
 import { deleteSession } from '../../db/actions';
@@ -8,7 +20,7 @@ import { clientName, useBuiltinCatalogs, useData, useSkinTypeName } from '../../
 import { ageFromBirthDate, formatDate, relativeDays, todayISO } from '../../lib/dates';
 import { formatMoney, formatNumber, plural } from '../../lib/format';
 import { averageDaysBetweenVisits, isInactive, nextSessionStatus, ranking, sortSessionsDesc } from '../../lib/stats';
-import { Badge, Card, EmptyState, PageHeader } from '../../components/ui/Card';
+import { Badge, Card, EmptyState } from '../../components/ui/Card';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { useConfirm, useToast } from '../../components/ui/Feedback';
 import { Avatar } from '../../components/ClientPicker';
@@ -86,109 +98,140 @@ export function ClientDetailPage() {
     toast.success('Sesión eliminada');
   };
 
+  const fitz = fitzpatrickInfo(client.fitzpatrick);
+  const inactive = isInactive(stat, settings.inactiveDays, today);
+
   return (
-    <div>
-      <PageHeader
-        back={
-          <Link
-            to="/clientas"
-            className="inline-flex items-center gap-1 font-semibold text-stone-600 hover:text-stone-900"
-          >
-            <ChevronLeft className="size-5" aria-hidden /> Clientas
-          </Link>
-        }
-        title={
-          <span className="flex items-center gap-3">
-            <Avatar name={name} size="lg" />
-            <span>
-              {name}
-              <span className="block text-base font-semibold text-stone-500">
-                {[
-                  age !== null ? `${age} años` : null,
-                  skinName(client) ? `Piel ${skinName(client).toLowerCase()}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ') || 'Ficha de clienta'}
-              </span>
+    <div className="space-y-6">
+      <Link
+        to="/clientas"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-stone-500 transition-colors hover:text-stone-900"
+      >
+        <ChevronLeft className="size-4" aria-hidden /> Clientas
+      </Link>
+
+      {/* Encabezado de la clienta */}
+      <section className="card relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-24 bg-linear-to-r from-rosa-100 via-rosa-50 to-salvia-50"
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-5 px-6 pt-10 pb-5">
+          <div className="flex min-w-0 items-end gap-5">
+            <span className="rounded-full bg-white p-1 shadow-card">
+              <Avatar name={name} size="lg" />
             </span>
-          </span>
-        }
-        actions={
-          <>
-            <LinkButton to={`/sesion/nueva?clienta=${clientId}`} size="lg" icon={<CalendarPlus className="size-5" />}>
-              Registrar sesión
-            </LinkButton>
-            <LinkButton
-              to={`/clientas/${clientId}/editar`}
-              variant="secondary"
-              size="lg"
-              icon={<Pencil className="size-5" />}
-            >
+            <div className="min-w-0 pb-1">
+              <h1 className="font-display text-[2rem] leading-tight font-semibold tracking-tight text-stone-900">
+                {name}
+              </h1>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
+                {age !== null && <span>{age} años</span>}
+                {skinName(client) && (
+                  <span className="flex items-center gap-1">
+                    <Flower2 className="size-3.5" aria-hidden /> Piel {skinName(client).toLowerCase()}
+                  </span>
+                )}
+                {fitz && (
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="size-3 rounded-full ring-1 ring-stone-300"
+                      style={{ backgroundColor: fitz.color }}
+                    />
+                    Fitzpatrick {fitz.value}
+                  </span>
+                )}
+                {client.phone && (
+                  <a
+                    href={`tel:${client.phone.replace(/[^\d+]/g, '')}`}
+                    className="flex items-center gap-1 hover:text-rosa-700"
+                  >
+                    <Phone className="size-3.5" aria-hidden /> {client.phone}
+                  </a>
+                )}
+                <span>Clienta desde {formatDate(stat?.firstDate ?? client.createdAt.slice(0, 10))}</span>
+              </p>
+              {(next || inactive) && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {inactive && stat?.lastDate && (
+                    <Badge tone="amber">
+                      Hace {relativeDays(stat.lastDate, today).replace('hace ', '')} que no viene
+                    </Badge>
+                  )}
+                  {next === 'pendiente' && (
+                    <Badge tone="salvia" icon={<CalendarClock />}>
+                      Próxima sesión sugerida: {formatDate(stat!.nextSessionDate)} (
+                      {relativeDays(stat!.nextSessionDate!, today)})
+                    </Badge>
+                  )}
+                  {next === 'vencida' && (
+                    <Badge tone="red" icon={<CalendarClock />}>
+                      Tenía que volver el {formatDate(stat!.nextSessionDate)}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <LinkButton to={`/clientas/${clientId}/editar`} variant="secondary" icon={<Pencil className="size-4" />}>
               Editar ficha
             </LinkButton>
-          </>
-        }
-      />
-
-      {(next || isInactive(stat, settings.inactiveDays, today)) && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          {isInactive(stat, settings.inactiveDays, today) && stat?.lastDate && (
-            <Badge tone="amber">Hace {relativeDays(stat.lastDate, today).replace('hace ', '')} que no viene</Badge>
-          )}
-          {next === 'pendiente' && (
-            <Badge tone="salvia" icon={<CalendarClock />}>
-              Próxima sesión sugerida: {formatDate(stat!.nextSessionDate)} (
-              {relativeDays(stat!.nextSessionDate!, today)})
-            </Badge>
-          )}
-          {next === 'vencida' && (
-            <Badge tone="red" icon={<CalendarClock />}>
-              Tenía que volver el {formatDate(stat!.nextSessionDate)}
-            </Badge>
-          )}
+            <LinkButton to={`/sesion/nueva?clienta=${clientId}`} icon={<CalendarPlus className="size-4" />}>
+              Registrar sesión
+            </LinkButton>
+          </div>
         </div>
-      )}
 
-      <div className="grid gap-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <dl className="relative grid grid-cols-2 border-t border-stone-100 sm:grid-cols-3 lg:grid-cols-6 lg:divide-x lg:divide-stone-100">
+          <Stat label="Sesiones" value={String(history.length)} />
+          <Stat label="Última visita" value={stat?.lastDate ? formatDate(stat.lastDate) : '–'} />
+          <Stat label="Primera visita" value={stat?.firstDate ? formatDate(stat.firstDate) : '–'} />
+          <Stat
+            label="Viene cada"
+            value={avgDays !== null ? `${formatNumber(Math.round(avgDays))} días` : '–'}
+            hint="promedio"
+          />
+          <Stat label="Total cobrado" value={(stat?.totalSpent ?? 0) > 0 ? formatMoney(stat!.totalSpent) : '–'} />
+          <Stat
+            label="Falta pagar"
+            value={(stat?.unpaid ?? 0) > 0 ? formatMoney(stat!.unpaid) : '–'}
+            warn={(stat?.unpaid ?? 0) > 0}
+          />
+        </dl>
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[25rem_minmax(0,1fr)]">
         {/* Columna ficha */}
-        <div className="space-y-5">
-          <Card title="Importante">
+        <div className="space-y-6">
+          <Card title="Importante" icon={<ShieldAlert />} tone="rosa">
             <ClientAlerts client={client} />
           </Card>
 
           <AnamnesisSummary client={client} />
 
-          <Card title="Resumen">
-            <dl className="grid grid-cols-2 gap-3">
-              <Stat label="Sesiones" value={String(history.length)} />
-              <Stat label="Última visita" value={stat?.lastDate ? formatDate(stat.lastDate) : '–'} />
-              <Stat label="Primera visita" value={stat?.firstDate ? formatDate(stat.firstDate) : '–'} />
-              <Stat
-                label="Viene cada"
-                value={avgDays !== null ? `${formatNumber(Math.round(avgDays))} días` : '–'}
-                hint="promedio"
-              />
-              {(stat?.totalSpent ?? 0) > 0 && <Stat label="Total cobrado" value={formatMoney(stat!.totalSpent)} />}
-              {(stat?.unpaid ?? 0) > 0 && <Stat label="Falta pagar" value={formatMoney(stat!.unpaid)} warn />}
-            </dl>
-            {((stat?.totalSpent ?? 0) > 0 || (stat?.unpaid ?? 0) > 0) && (
-              <Link
-                to={`/panel/ingresos?clienta=${clientId}&periodo=todo`}
-                className="mt-3 inline-block text-sm font-bold text-rosa-700 underline underline-offset-2"
-              >
-                Ver lo que se le cobró por cada tratamiento
-              </Link>
-            )}
-            {topTreatments.length > 0 && <TopList title="Tratamiento más frecuente" rows={topTreatments} />}
-            {topProducts.length > 0 && <TopList title="Productos más usados con ella" rows={topProducts} />}
-            {topDevices.length > 0 && <TopList title="Aparatología más usada" rows={topDevices} />}
-          </Card>
+          {(topTreatments.length > 0 || topProducts.length > 0 || topDevices.length > 0) && (
+            <Card title="Lo que más le hacés" icon={<Sparkles />} tone="violet">
+              {topTreatments.length > 0 && <TopList title="Tratamiento más frecuente" rows={topTreatments} />}
+              {topProducts.length > 0 && <TopList title="Productos más usados con ella" rows={topProducts} />}
+              {topDevices.length > 0 && <TopList title="Aparatología más usada" rows={topDevices} />}
+              {((stat?.totalSpent ?? 0) > 0 || (stat?.unpaid ?? 0) > 0) && (
+                <Link
+                  to={`/panel/ingresos?clienta=${clientId}&periodo=todo`}
+                  className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-rosa-700 hover:text-rosa-800"
+                >
+                  Ver lo que se le cobró por cada tratamiento <ChevronRight className="size-4" aria-hidden />
+                </Link>
+              )}
+            </Card>
+          )}
 
           <Button
             variant="ghost"
             block
-            className="text-red-700 hover:bg-red-50"
-            icon={<Trash2 className="size-5" />}
+            className="text-stone-400 hover:bg-red-50 hover:text-red-700"
+            icon={<Trash2 className="size-4" />}
             onClick={() => void removeClient()}
           >
             Eliminar clienta
@@ -197,30 +240,26 @@ export function ClientDetailPage() {
 
         {/* Línea de tiempo */}
         <section aria-labelledby="historial-titulo">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 id="historial-titulo" className="text-xl font-extrabold text-stone-900">
+          <div className="mb-4 flex items-end justify-between gap-2">
+            <h2 id="historial-titulo" className="font-display text-[1.45rem] font-semibold text-stone-900">
               Historial de sesiones
             </h2>
-            <span className="text-stone-500">{plural(history.length, 'sesión', 'sesiones')}</span>
+            <span className="text-sm font-medium text-stone-500">{plural(history.length, 'sesión', 'sesiones')}</span>
           </div>
           {history.length === 0 ? (
             <EmptyState
               icon={<CalendarPlus />}
               title="Todavía no tiene sesiones"
               action={
-                <LinkButton to={`/sesion/nueva?clienta=${clientId}`} icon={<CalendarPlus className="size-5" />}>
+                <LinkButton to={`/sesion/nueva?clienta=${clientId}`} icon={<CalendarPlus className="size-4" />}>
                   Registrar la primera sesión
                 </LinkButton>
               }
             />
           ) : (
-            <ol className="relative space-y-4 border-l-2 border-rosa-200 pl-5 sm:pl-7">
+            <ol className="stagger relative space-y-4 before:absolute before:top-4 before:bottom-4 before:left-[3.55rem] before:w-px before:bg-linear-to-b before:from-rosa-200 before:via-rosa-100 before:to-transparent">
               {history.map((s) => (
                 <li key={s.id} className="relative">
-                  <span
-                    aria-hidden
-                    className="absolute top-6 -left-[1.69rem] size-4 rounded-full border-4 border-crema bg-rosa-500 sm:-left-[2.19rem]"
-                  />
                   <SessionCard session={s} onDelete={removeSession} />
                 </li>
               ))}
@@ -234,26 +273,27 @@ export function ClientDetailPage() {
 
 function Stat({ label, value, hint, warn }: { label: string; value: string; hint?: string; warn?: boolean }) {
   return (
-    <div className={`rounded-xl p-3 ${warn ? 'bg-amber-50' : 'bg-crema'}`}>
-      <dt className="text-sm font-semibold text-stone-500">
-        {label} {hint && <span className="font-normal">({hint})</span>}
+    <div className="px-6 py-4">
+      <dt className="text-xs font-semibold text-stone-500">
+        {label} {hint && <span className="font-normal text-stone-400">({hint})</span>}
       </dt>
-      <dd className={`text-lg font-extrabold ${warn ? 'text-amber-900' : 'text-stone-900'}`}>{value}</dd>
+      <dd className={`num mt-0.5 text-lg font-bold ${warn ? 'text-amber-700' : 'text-stone-900'}`}>{value}</dd>
     </div>
   );
 }
 
 function TopList({ title, rows }: { title: string; rows: { id: number; name: string; count: number }[] }) {
   return (
-    <div className="mt-4">
-      <p className="mb-1.5 text-sm font-bold text-stone-500">{title}</p>
+    <div className="mt-4 first:mt-0">
+      <p className="mb-2 text-xs font-bold tracking-wide text-stone-400 uppercase">{title}</p>
       <ul className="flex flex-wrap gap-1.5">
         {rows.map((r) => (
           <li
             key={r.id}
-            className="rounded-full bg-rosa-50 px-2.5 py-0.5 text-sm font-semibold text-rosa-900 ring-1 ring-rosa-200"
+            className="inline-flex items-center gap-1.5 rounded-full bg-rosa-50 py-0.5 pr-1 pl-2.5 text-sm font-medium text-rosa-900 ring-1 ring-rosa-100 ring-inset"
           >
-            {r.name} <span className="font-normal text-rosa-700">×{r.count}</span>
+            {r.name}
+            <span className="num rounded-full bg-white px-1.5 text-xs font-bold text-rosa-600">{r.count}</span>
           </li>
         ))}
       </ul>

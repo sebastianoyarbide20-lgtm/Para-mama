@@ -1,9 +1,48 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
+export type Tone = 'rosa' | 'salvia' | 'amber' | 'sky' | 'violet' | 'stone';
+
+/** Fondo y color de los "chips" de ícono por tono. */
+export const toneChip: Record<Tone, string> = {
+  rosa: 'bg-rosa-50 text-rosa-600 ring-rosa-100',
+  salvia: 'bg-salvia-50 text-salvia-600 ring-salvia-100',
+  amber: 'bg-amber-50 text-amber-600 ring-amber-100',
+  sky: 'bg-sky-50 text-sky-600 ring-sky-100',
+  violet: 'bg-violet-50 text-violet-600 ring-violet-100',
+  stone: 'bg-stone-100 text-stone-600 ring-stone-200/60',
+};
+
+/** Ícono dentro de un cuadradito de color suave. */
+export function IconChip({
+  children,
+  tone = 'rosa',
+  size = 'md',
+}: {
+  children: ReactNode;
+  tone?: Tone;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizes = {
+    sm: 'size-8 rounded-lg [&>svg]:size-4',
+    md: 'size-10 rounded-xl [&>svg]:size-5',
+    lg: 'size-12 rounded-2xl [&>svg]:size-6',
+  };
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex shrink-0 items-center justify-center ring-1 ring-inset ${sizes[size]} ${toneChip[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function Card({
   title,
   subtitle,
   actions,
+  icon,
+  tone = 'rosa',
   children,
   className = '',
   padded = true,
@@ -12,20 +51,27 @@ export function Card({
   title?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** Ícono opcional al lado del título. */
+  icon?: ReactNode;
+  tone?: Tone;
   padded?: boolean;
 } & Omit<HTMLAttributes<HTMLElement>, 'title'>) {
   return (
-    <section
-      className={`rounded-2xl bg-white shadow-sm ring-1 ring-stone-200/80 ${padded ? 'p-4 sm:p-5' : ''} ${className}`}
-      {...props}
-    >
+    <section className={`card ${padded ? 'p-5 xl:p-6' : ''} ${className}`} {...props}>
       {(title || actions) && (
         <header
-          className={`mb-3 flex flex-wrap items-start justify-between gap-2 ${padded ? '' : 'px-4 pt-4 sm:px-5'}`}
+          className={`mb-4 flex flex-wrap items-start justify-between gap-3 ${padded ? '' : 'px-5 pt-5 xl:px-6'}`}
         >
-          <div className="min-w-0">
-            {title && <h2 className="text-lg font-bold text-stone-900">{title}</h2>}
-            {subtitle && <p className="text-sm text-stone-600">{subtitle}</p>}
+          <div className="flex min-w-0 items-center gap-3">
+            {icon && (
+              <IconChip tone={tone} size="sm">
+                {icon}
+              </IconChip>
+            )}
+            <div className="min-w-0">
+              {title && <h2 className="text-[1.05rem] font-bold tracking-tight text-stone-900">{title}</h2>}
+              {subtitle && <p className="text-sm text-stone-500">{subtitle}</p>}
+            </div>
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </header>
@@ -40,23 +86,26 @@ export function PageHeader({
   subtitle,
   actions,
   back,
+  eyebrow,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
   back?: ReactNode;
+  /** Texto chico arriba del título (por ejemplo, el sector). */
+  eyebrow?: ReactNode;
 }) {
   return (
-    <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        {back && <div className="mb-1">{back}</div>}
-        <h1 className="text-2xl font-extrabold tracking-tight text-stone-900 sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-stone-600">{subtitle}</p>}
+        {back && <div className="mb-2 text-sm">{back}</div>}
+        {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
+        <h1 className="font-display text-[2.15rem] leading-[1.1] font-semibold tracking-tight text-stone-900">
+          {title}
+        </h1>
+        {subtitle && <p className="mt-1.5 text-[0.95rem] text-stone-500">{subtitle}</p>}
       </div>
-      {actions && (
-        // En el celular los botones ocupan todo el ancho (más fáciles de tocar).
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto [&>*]:grow sm:[&>*]:grow-0">{actions}</div>
-      )}
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }
@@ -76,12 +125,16 @@ export function EmptyState({
 }) {
   return (
     <div
-      className={`flex flex-col items-center rounded-2xl border-2 border-dashed border-stone-200 bg-white/60 text-center ${compact ? 'px-4 py-6' : 'px-6 py-10'}`}
+      className={`flex flex-col items-center rounded-[1.25rem] border border-dashed border-stone-300/80 bg-white/60 text-center backdrop-blur-sm ${compact ? 'px-6 py-8' : 'px-8 py-14'}`}
     >
-      {icon && <div className="mb-3 text-rosa-400 [&>svg]:size-10">{icon}</div>}
-      <p className="text-lg font-bold text-stone-800">{title}</p>
-      {children && <div className="mt-1 max-w-md text-stone-600">{children}</div>}
-      {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}
+      {icon && (
+        <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-linear-to-br from-rosa-100 to-rosa-50 text-rosa-500 ring-1 ring-rosa-100 [&>svg]:size-8">
+          {icon}
+        </div>
+      )}
+      <p className="font-display text-xl font-semibold text-stone-900">{title}</p>
+      {children && <div className="mt-1.5 max-w-md text-stone-500">{children}</div>}
+      {action && <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
   );
 }
@@ -89,12 +142,12 @@ export function EmptyState({
 export type BadgeTone = 'neutral' | 'rosa' | 'salvia' | 'amber' | 'red' | 'blue';
 
 const badgeTones: Record<BadgeTone, string> = {
-  neutral: 'bg-stone-100 text-stone-700 ring-stone-200',
-  rosa: 'bg-rosa-50 text-rosa-800 ring-rosa-200',
-  salvia: 'bg-salvia-50 text-salvia-800 ring-salvia-200',
-  amber: 'bg-amber-50 text-amber-900 ring-amber-200',
-  red: 'bg-red-50 text-red-800 ring-red-200',
-  blue: 'bg-sky-50 text-sky-900 ring-sky-200',
+  neutral: 'bg-stone-100 text-stone-700 ring-stone-200/70',
+  rosa: 'bg-rosa-50 text-rosa-700 ring-rosa-200/70',
+  salvia: 'bg-salvia-50 text-salvia-700 ring-salvia-200/70',
+  amber: 'bg-amber-50 text-amber-800 ring-amber-200/70',
+  red: 'bg-red-50 text-red-700 ring-red-200/70',
+  blue: 'bg-sky-50 text-sky-800 ring-sky-200/70',
 };
 
 export function Badge({
@@ -110,7 +163,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-semibold ring-1 ring-inset [&>svg]:size-3.5 ${badgeTones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.8rem] font-semibold whitespace-nowrap ring-1 ring-inset [&>svg]:size-3.5 ${badgeTones[tone]} ${className}`}
     >
       {icon}
       {children}
@@ -120,8 +173,8 @@ export function Badge({
 
 export function Spinner({ label = 'Cargando…' }: { label?: string }) {
   return (
-    <div role="status" className="flex flex-col items-center justify-center gap-3 py-16 text-stone-500">
-      <span className="size-9 animate-spin rounded-full border-4 border-rosa-200 border-t-rosa-600" />
+    <div role="status" className="flex flex-col items-center justify-center gap-3 py-20 text-stone-500">
+      <span className="size-9 animate-spin rounded-full border-[3px] border-rosa-100 border-t-rosa-500" />
       <span>{label}</span>
     </div>
   );
@@ -134,8 +187,13 @@ export function InfoRow({ label, children, icon }: { label: string; children: Re
       {icon && <span className="mt-0.5 text-stone-400 [&>svg]:size-5">{icon}</span>}
       <div className="min-w-0 flex-1">
         <dt className="text-sm font-semibold text-stone-500">{label}</dt>
-        <dd className="whitespace-pre-line break-words text-stone-800">{children}</dd>
+        <dd className="break-words whitespace-pre-line text-stone-800">{children}</dd>
       </div>
     </div>
   );
+}
+
+/** Contenedor que hace aparecer a sus hijos de a uno (suave). */
+export function Stagger({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`stagger ${className}`}>{children}</div>;
 }

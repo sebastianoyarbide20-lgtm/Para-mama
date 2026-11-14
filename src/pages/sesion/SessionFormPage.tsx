@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarPlus, CircleCheck, Clock, History, House, Plus, Save, Trash2 } from 'lucide-react';
+import { CalendarPlus, Check, CircleCheck, Clock, History, House, Plus, Save, Trash2, UserRound } from 'lucide-react';
 import { db } from '../../db/db';
 import type { Selections, Session } from '../../db/types';
 import { deleteSession, saveSession, type SessionInput } from '../../db/actions';
 import { clientName, useData } from '../../hooks/useData';
 import { addDays, formatDate, formatDateLong, nowTime, todayISO } from '../../lib/dates';
-import { formatMoney, parseMoneyInput } from '../../lib/format';
+import { formatMoney, parseMoneyInput, plural } from '../../lib/format';
 import { countSelections } from '../../lib/stats';
 import { lastPriceForClient } from '../../lib/finance';
 import { Card, PageHeader, Spinner, EmptyState } from '../../components/ui/Card';
@@ -223,6 +223,7 @@ function SessionForm({
       ? charges.reduce((a, c) => a + (c.amount ?? 0), 0) + (extraAmount ?? 0)
       : null;
   const missingCharges = charges.filter((c) => !c.text.trim());
+  const selectedCount = Object.values(form.selections).reduce((a, l) => a + l.length, 0);
   const invalidCharges = charges.filter((c) => c.text.trim() && c.amount === null);
 
   const duplicateFrom = (session: Session) => {
@@ -378,6 +379,7 @@ function SessionForm({
   return (
     <div ref={topRef} className="scroll-mt-20">
       <PageHeader
+        eyebrow={editingId ? 'Sesiones' : 'Sesión de hoy'}
         title={editingId ? 'Editar sesión' : 'Sesión de hoy'}
         subtitle={
           editingId
@@ -387,16 +389,46 @@ function SessionForm({
       />
       {!editingId && <SectionTabs tabs={SESSION_TABS} />}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <StepsBar
+        steps={[
+          {
+            id: 'paso-clienta',
+            label: 'Clienta',
+            value: form.clientId ? clientsById.get(form.clientId)?.firstName : undefined,
+            done: !!form.clientId,
+          },
+          { id: 'paso-fecha', label: 'Fecha', value: form.date ? formatDate(form.date) : undefined, done: !!form.date },
+          {
+            id: 'paso-3',
+            label: 'Tratamientos',
+            value: selectedCount ? plural(selectedCount, 'opción', 'opciones') : undefined,
+            done: selectedCount > 0,
+          },
+          {
+            id: 'paso-notas',
+            label: 'Notas',
+            done: !!(form.homeRecommendations.trim() || form.observations.trim()),
+          },
+          {
+            id: 'paso-cobro',
+            label: 'Cobro',
+            value: total !== null ? formatMoney(total) : undefined,
+            done: total !== null && missingCharges.length === 0,
+          },
+          { id: 'paso-extras', label: 'Extras', done: !!(form.nextSessionDate || form.photos.length) },
+        ]}
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
         <form
-          className="space-y-5"
+          className="space-y-6"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
             void save('normal');
           }}
         >
-          <Card id="paso-clienta" title={<StepTitle n={1}>¿A quién atendiste?</StepTitle>} className="scroll-mt-24">
+          <Card id="paso-clienta" title={<StepTitle n={1}>¿A quién atendiste?</StepTitle>} className="scroll-mt-40">
             <ClientPicker
               value={form.clientId}
               onChange={(cid) => {
@@ -417,7 +449,7 @@ function SessionForm({
             )}
           </Card>
 
-          <Card id="paso-fecha" title={<StepTitle n={2}>¿Cuándo?</StepTitle>} className="scroll-mt-24">
+          <Card id="paso-fecha" title={<StepTitle n={2}>¿Cuándo?</StepTitle>} className="scroll-mt-40">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <TextField
@@ -456,8 +488,8 @@ function SessionForm({
             </div>
           </Card>
 
-          <section aria-labelledby="paso-tratamientos" className="space-y-4">
-            <h2 id="paso-tratamientos" className="px-1 text-lg font-bold text-stone-900">
+          <section id="paso-3" aria-labelledby="paso-tratamientos" className="scroll-mt-40 space-y-4">
+            <h2 id="paso-tratamientos" className="px-1 text-[1.05rem] font-bold text-stone-900">
               <StepTitle n={3}>¿Qué le hiciste?</StepTitle>
             </h2>
             {sessionCatalogs.map((catalog) => (
@@ -492,7 +524,7 @@ function SessionForm({
             </p>
           </section>
 
-          <Card title={<StepTitle n={4}>Para la casa y notas</StepTitle>}>
+          <Card id="paso-notas" title={<StepTitle n={4}>Para la casa y notas</StepTitle>} className="scroll-mt-40">
             <div className="space-y-4">
               <TextArea
                 label="Recomendaciones para hacer en casa"
@@ -515,7 +547,7 @@ function SessionForm({
             id="paso-cobro"
             title={<StepTitle n={5}>Cobro</StepTitle>}
             subtitle="Se suma solo con lo que anotaste en cada opción."
-            className="scroll-mt-24"
+            className="scroll-mt-40"
           >
             {charges.length === 0 ? (
               <p className="text-stone-600">
@@ -596,7 +628,7 @@ function SessionForm({
             id="paso-extras"
             title={<StepTitle n={6}>Extras</StepTitle>}
             subtitle="Todo esto es opcional."
-            className="scroll-mt-24"
+            className="scroll-mt-40"
           >
             <div className="space-y-6">
               <div>
@@ -634,7 +666,7 @@ function SessionForm({
             </div>
           </Card>
 
-          <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-2 rounded-2xl bg-white/95 p-2.5 shadow-lg ring-1 ring-stone-200 backdrop-blur sm:p-3 lg:bottom-4">
+          <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-2 rounded-2xl bg-white/90 p-2.5 shadow-pop ring-1 ring-stone-900/5 backdrop-blur-xl sm:p-3 lg:bottom-5">
             {editingId ? (
               <>
                 <Button
@@ -687,15 +719,25 @@ function SessionForm({
         </form>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-6 rounded-2xl bg-white/70 p-4 ring-1 ring-stone-200">
-            {form.clientId ? (
-              <ClientSummary clientId={form.clientId} excludeSessionId={editingId} onDuplicate={duplicateFrom} />
-            ) : (
-              <p className="text-stone-600">
-                Cuando elijas una clienta, acá vas a ver sus <strong>alergias</strong>, <strong>medicación</strong>,{' '}
-                <strong>tipo de piel</strong> y su <strong>última sesión</strong>.
-              </p>
-            )}
+          <div className="card sticky top-40 overflow-hidden">
+            <div aria-hidden className="h-1.5 bg-linear-to-r from-rosa-400 via-rosa-300 to-salvia-300" />
+            <div className="p-5">
+              {form.clientId ? (
+                <ClientSummary clientId={form.clientId} excludeSessionId={editingId} onDuplicate={duplicateFrom} />
+              ) : (
+                <div className="py-4 text-center">
+                  <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-rosa-50 text-rosa-500">
+                    <UserRound className="size-6" aria-hidden />
+                  </span>
+                  <p className="text-sm text-stone-500">
+                    Cuando elijas una clienta, acá vas a ver sus <strong className="text-stone-700">alergias</strong>,{' '}
+                    <strong className="text-stone-700">medicación</strong>,{' '}
+                    <strong className="text-stone-700">tipo de piel</strong> y su{' '}
+                    <strong className="text-stone-700">última sesión</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </aside>
       </div>
@@ -708,7 +750,7 @@ function StepTitle({ n, children }: { n: number; children: React.ReactNode }) {
     <span className="flex items-center gap-2.5">
       <span
         aria-hidden
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-rosa-600 text-base font-extrabold text-white"
+        className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-rosa-500 to-rosa-600 font-display text-base font-semibold text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]"
       >
         {n}
       </span>
@@ -731,10 +773,10 @@ function QuickChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-3 py-1 text-sm font-bold transition-colors ${
+      className={`inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold ring-1 transition-colors ring-inset ${
         active
-          ? 'border-rosa-500 bg-rosa-50 text-rosa-800'
-          : 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
+          ? 'bg-rosa-50 text-rosa-700 ring-rosa-200'
+          : 'bg-white text-stone-600 ring-stone-200 hover:bg-stone-50 hover:text-stone-900'
       }`}
     >
       {children}
@@ -748,15 +790,18 @@ function SavedView({ saved, onAnother }: { saved: { sessionId: number; clientId:
   const name = clientName(clientsById.get(saved.clientId));
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-stone-200 sm:p-10" role="status">
-        <CircleCheck className="animate-pop-in mx-auto size-20 text-salvia-600" aria-hidden />
-        <h1 className="mt-4 text-3xl font-extrabold text-stone-900">¡Sesión guardada!</h1>
+      <div className="card relative overflow-hidden p-6 text-center sm:p-10" role="status">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-40 bg-linear-to-b from-salvia-50 to-transparent" />
+        <span className="animate-pop-in relative mx-auto flex size-24 items-center justify-center rounded-full bg-linear-to-br from-salvia-400 to-salvia-600 text-white shadow-[0_18px_40px_-16px_rgb(66_106_82/0.9)]">
+          <CircleCheck className="size-12" aria-hidden />
+        </span>
+        <h1 className="relative mt-5 font-display text-[2.2rem] font-semibold text-stone-900">¡Sesión guardada!</h1>
         <p className="mt-2 text-lg text-stone-700">
           {name}
           {session && <> · {formatDateLong(session.date)}</>}
         </p>
         {session && (
-          <div className="mt-6 rounded-2xl bg-crema p-4 text-left">
+          <div className="mt-6 rounded-2xl bg-stone-50 p-4 text-left ring-1 ring-stone-900/[0.03]">
             <SessionSelections session={session} compact />
           </div>
         )}
@@ -778,5 +823,46 @@ function SavedView({ saved, onAnother }: { saved: { sessionId: number; clientId:
         </div>
       </div>
     </div>
+  );
+}
+
+/** Barra de pasos fija arriba del formulario: muestra qué está completo y lleva a cada paso. */
+function StepsBar({ steps }: { steps: { id: string; label: string; value?: string; done: boolean }[] }) {
+  const doneCount = steps.filter((s) => s.done).length;
+  return (
+    <nav aria-label="Pasos de la sesión" className="sticky top-0 z-20 -mx-2 mb-6 hidden px-2 py-2 lg:top-16 lg:block">
+      <div className="card flex items-center gap-1 p-2 backdrop-blur-xl">
+        {steps.map((step, i) => (
+          <div key={step.id} className="flex min-w-0 flex-1 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => document.getElementById(step.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left transition-colors hover:bg-stone-50"
+            >
+              <span
+                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                  step.done
+                    ? 'bg-salvia-500 text-white shadow-[0_4px_10px_-4px_rgb(66_106_82/0.8)]'
+                    : 'bg-stone-100 text-stone-500 group-hover:bg-rosa-50 group-hover:text-rosa-600'
+                }`}
+              >
+                {step.done ? <Check className="size-4" strokeWidth={3} aria-hidden /> : i + 1}
+              </span>
+              <span className="min-w-0">
+                <span
+                  className={`block truncate text-sm font-semibold ${step.done ? 'text-stone-900' : 'text-stone-500'}`}
+                >
+                  {step.label}
+                </span>
+                {step.value && <span className="num block truncate text-xs text-stone-500">{step.value}</span>}
+              </span>
+            </button>
+          </div>
+        ))}
+        <span className="num ml-1 shrink-0 rounded-lg bg-stone-50 px-2.5 py-1 text-xs font-bold text-stone-500">
+          {doneCount}/{steps.length}
+        </span>
+      </div>
+    </nav>
   );
 }

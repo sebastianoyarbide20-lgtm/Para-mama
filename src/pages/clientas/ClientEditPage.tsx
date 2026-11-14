@@ -38,8 +38,9 @@ export function ClientEditPage() {
   const afterSave = params.get('volver');
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <PageHeader
+        eyebrow="Clientas"
         back={
           <Link
             to={editingId ? `/clientas/${editingId}` : '/clientas'}

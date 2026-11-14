@@ -14,6 +14,10 @@ import { SearchInput, SelectField } from '../../components/ui/Fields';
 import { Avatar } from '../../components/ClientPicker';
 import { SectionTabs } from '../../components/SectionTabs';
 
+/** Columnas de la tabla de clientas (escritorio). */
+const ROW_GRID =
+  'grid grid-cols-[minmax(0,2.3fr)_minmax(0,1.1fr)_4.5rem_minmax(0,1.5fr)_minmax(0,1.7fr)_1.25rem] gap-5';
+
 export const PANEL_TABS = [
   { to: '/panel', label: 'Resumen', icon: ChartColumn, end: true },
   { to: '/panel/ingresos', label: 'Ingresos', icon: Wallet },
@@ -106,10 +110,11 @@ export function ClientsListPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Panel"
         title="Clientas"
         subtitle={plural(clients.length, 'clienta cargada', 'clientas cargadas')}
         actions={
-          <LinkButton to="/clientas/nueva" variant="success" icon={<UserPlus className="size-5" />}>
+          <LinkButton to="/clientas/nueva" variant="success" icon={<UserPlus className="size-4" />}>
             Nueva clienta
           </LinkButton>
         }
@@ -122,7 +127,7 @@ export function ClientsListPage() {
           title="Todavía no cargaste clientas"
           action={
             <>
-              <LinkButton to="/clientas/nueva" variant="success" icon={<UserPlus className="size-5" />}>
+              <LinkButton to="/clientas/nueva" variant="success" icon={<UserPlus className="size-4" />}>
                 Agregar la primera
               </LinkButton>
               <LinkButton to="/mis-datos/ajustes" variant="secondary">
@@ -134,48 +139,53 @@ export function ClientsListPage() {
           También podés crearlas directamente al registrar una sesión.
         </EmptyState>
       ) : (
-        <>
-          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-            <SearchInput
-              value={query}
-              onChange={setQuery}
-              placeholder="Buscar por nombre, teléfono o email…"
-              label="Buscar clienta"
-            />
-            <SelectField
-              label={<span className="sr-only">Ordenar por</span>}
-              value={sort}
-              onValueChange={(v) => setSort(v as Sort)}
-              className="sm:w-60"
-            >
-              <option value="ultima">Orden: última visita</option>
-              <option value="sesiones">Orden: más sesiones</option>
-              <option value="nombre">Orden: nombre (A-Z)</option>
-              <option value="alta">Orden: cargadas recientemente</option>
-              <option value="proxima">Orden: próxima sesión</option>
-            </SelectField>
-          </div>
-          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filtrar clientas">
-            {filters.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                aria-pressed={filter === f.key}
-                onClick={() => setFilter(f.key)}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-full border-2 px-3.5 py-1 font-bold transition-colors ${
-                  filter === f.key
-                    ? 'border-rosa-600 bg-rosa-600 text-white'
-                    : 'border-stone-200 bg-white text-stone-700 hover:border-rosa-300'
-                }`}
+        <div className="space-y-5">
+          <div className="card space-y-4 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Buscar por nombre, teléfono o email…"
+                label="Buscar clienta"
+                className="min-w-72 flex-1"
+              />
+              <SelectField
+                label={<span className="sr-only">Ordenar por</span>}
+                value={sort}
+                onValueChange={(v) => setSort(v as Sort)}
+                className="w-64"
               >
-                {f.label}
-                <span
-                  className={`rounded-full px-2 text-sm ${filter === f.key ? 'bg-white/25' : 'bg-stone-100 text-stone-600'}`}
+                <option value="ultima">Orden: última visita</option>
+                <option value="sesiones">Orden: más sesiones</option>
+                <option value="nombre">Orden: nombre (A-Z)</option>
+                <option value="alta">Orden: cargadas recientemente</option>
+                <option value="proxima">Orden: próxima sesión</option>
+              </SelectField>
+            </div>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar clientas">
+              {filters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={filter === f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-all ${
+                    filter === f.key
+                      ? 'bg-rosa-600 text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]'
+                      : 'bg-stone-100/80 text-stone-600 hover:bg-stone-200/70 hover:text-stone-900'
+                  }`}
                 >
-                  {counts[f.key]}
-                </span>
-              </button>
-            ))}
+                  {f.label}
+                  <span
+                    className={`num rounded-md px-1.5 text-xs font-bold ${
+                      filter === f.key ? 'bg-white/25' : 'bg-white text-stone-500'
+                    }`}
+                  >
+                    {counts[f.key]}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {list.length === 0 ? (
@@ -183,71 +193,91 @@ export function ClientsListPage() {
               Probá con otra búsqueda o cambiá el filtro.
             </EmptyState>
           ) : (
-            <ul className="space-y-2.5">
-              {list.map((c) => {
-                const s = clientStats.get(c.id!);
-                const inactive = isInactive(s, days, today);
-                const next = nextSessionStatus(s, today);
-                const incomplete = !isAnamnesisComplete(c);
-                const skin = skinName(c);
-                return (
-                  <li key={c.id}>
-                    <Link
-                      to={`/clientas/${c.id}`}
-                      className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-sm ring-1 ring-stone-200/80 transition-colors hover:bg-rosa-50/50 hover:ring-rosa-200 sm:p-4"
-                    >
-                      <Avatar name={clientName(c)} />
-                      <div className="min-w-0 flex-1">
-                        <p className="flex flex-wrap items-center gap-x-2 text-lg font-extrabold text-stone-900">
-                          {clientName(c)}
-                          {skin && (
-                            <span className="text-sm font-semibold text-stone-500">Piel {skin.toLowerCase()}</span>
-                          )}
-                        </p>
-                        <p className="text-stone-600">
+            <div className="card overflow-hidden">
+              <div
+                aria-hidden
+                className={`${ROW_GRID} border-b border-stone-100 bg-stone-50/70 px-5 py-2.5 text-xs font-bold tracking-wide text-stone-400 uppercase`}
+              >
+                <span>Clienta</span>
+                <span>Última visita</span>
+                <span className="text-right">Sesiones</span>
+                <span>Próxima sesión</span>
+                <span>Estado</span>
+                <span />
+              </div>
+              <ul aria-label="Clientas" className="stagger divide-y divide-stone-100">
+                {list.map((c) => {
+                  const s = clientStats.get(c.id!);
+                  const inactive = isInactive(s, days, today);
+                  const next = nextSessionStatus(s, today);
+                  const incomplete = !isAnamnesisComplete(c);
+                  const skin = skinName(c);
+                  return (
+                    <li key={c.id}>
+                      <Link
+                        to={`/clientas/${c.id}`}
+                        className={`${ROW_GRID} group items-center px-5 py-3 transition-colors hover:bg-rosa-50/40`}
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <Avatar name={clientName(c)} />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-stone-900 group-hover:text-rosa-700">
+                              {clientName(c)}
+                            </span>
+                            <span className="block truncate text-sm text-stone-500">
+                              {[skin && `Piel ${skin.toLowerCase()}`, c.phone].filter(Boolean).join(' · ') || '—'}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="min-w-0 text-sm">
                           {s?.lastDate ? (
                             <>
-                              Última visita: {formatDate(s.lastDate)}{' '}
-                              <span className="text-stone-500">({relativeDays(s.lastDate, today)})</span> ·{' '}
-                              {plural(s.count, 'sesión', 'sesiones')}
+                              <span className="block font-medium text-stone-800">{formatDate(s.lastDate)}</span>
+                              <span className="block text-stone-500">{relativeDays(s.lastDate, today)}</span>
                             </>
                           ) : (
-                            'Sin sesiones todavía'
+                            <span className="text-stone-400">Sin sesiones todavía</span>
                           )}
-                        </p>
-                        {(inactive || next || incomplete) && (
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {incomplete && (
-                              <Badge tone="amber" icon={<ClipboardList />}>
-                                Ficha incompleta
-                              </Badge>
-                            )}
-                            {inactive && s?.lastDate && (
-                              <Badge tone="amber" icon={<Clock />}>
-                                Hace {daysBetween(s.lastDate, today)} días que no viene
-                              </Badge>
-                            )}
-                            {next === 'pendiente' && (
-                              <Badge tone="salvia" icon={<CalendarClock />}>
-                                Próxima sesión: {formatDate(s!.nextSessionDate)}
-                              </Badge>
-                            )}
-                            {next === 'vencida' && (
-                              <Badge tone="red" icon={<CalendarClock />}>
-                                Tenía que volver el {formatDate(s!.nextSessionDate)}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <ChevronRight className="size-6 shrink-0 text-stone-400" aria-hidden />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                        </span>
+                        <span className="num text-right font-semibold text-stone-800">{s?.count ?? 0}</span>
+                        <span className="min-w-0 text-sm">
+                          {next === 'pendiente' && (
+                            <Badge tone="salvia" icon={<CalendarClock />}>
+                              {formatDate(s!.nextSessionDate)} · {relativeDays(s!.nextSessionDate!, today)}
+                            </Badge>
+                          )}
+                          {next === 'vencida' && (
+                            <Badge tone="red" icon={<CalendarClock />}>
+                              Tenía que volver el {formatDate(s!.nextSessionDate)}
+                            </Badge>
+                          )}
+                          {!next && <span className="text-stone-300">—</span>}
+                        </span>
+                        <span className="flex min-w-0 flex-wrap gap-1.5">
+                          {incomplete && (
+                            <Badge tone="amber" icon={<ClipboardList />}>
+                              Ficha incompleta
+                            </Badge>
+                          )}
+                          {inactive && s?.lastDate && (
+                            <Badge tone="amber" icon={<Clock />}>
+                              Hace {daysBetween(s.lastDate, today)} días que no viene
+                            </Badge>
+                          )}
+                          {!incomplete && !inactive && <span className="text-sm text-stone-300">Al día</span>}
+                        </span>
+                        <ChevronRight
+                          className="size-5 justify-self-end text-stone-300 transition-all group-hover:translate-x-0.5 group-hover:text-rosa-500"
+                          aria-hidden
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

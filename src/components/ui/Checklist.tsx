@@ -42,7 +42,7 @@ export function Checklist({
 
   return (
     <fieldset id={id} className="scroll-mt-28" aria-describedby={error ? `${legendId}-error` : undefined}>
-      <legend id={legendId} className="mb-1.5 font-semibold text-stone-800">
+      <legend id={legendId} className="mb-2 text-sm font-semibold text-stone-700">
         {label}
         <span className="text-rosa-600" aria-hidden="true">
           {' '}
@@ -63,16 +63,16 @@ export function Checklist({
               type="button"
               aria-pressed={selected}
               onClick={() => toggle(opt.key)}
-              className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border-2 px-3.5 py-1.5 text-left font-semibold transition-colors ${
+              className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-1.5 text-left text-[0.92rem] font-medium transition-all duration-150 ${
                 selected
-                  ? 'border-rosa-600 bg-rosa-600 text-white shadow-sm'
-                  : 'border-stone-200 bg-white text-stone-700 hover:border-rosa-300 hover:bg-rosa-50'
+                  ? 'bg-rosa-50 text-rosa-800 ring-2 ring-rosa-400 ring-inset'
+                  : 'bg-white text-stone-700 ring-1 ring-stone-200 ring-inset hover:ring-rosa-300'
               }`}
             >
               <span
                 aria-hidden
-                className={`flex size-5 shrink-0 items-center justify-center rounded-md border-2 ${
-                  selected ? 'border-white bg-white text-rosa-700' : 'border-stone-300'
+                className={`flex size-[1.1rem] shrink-0 items-center justify-center rounded-[0.35rem] transition-colors ${
+                  selected ? 'bg-rosa-600 text-white' : 'ring-[1.5px] ring-stone-300 ring-inset'
                 }`}
               >
                 {selected && <Check className="size-3.5" strokeWidth={3} />}
@@ -85,10 +85,10 @@ export function Checklist({
           type="button"
           aria-pressed={noneSelected}
           onClick={() => toggle(NONE)}
-          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border-2 border-dashed px-3.5 py-1.5 font-semibold transition-colors ${
+          className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-dashed px-3 py-1.5 text-[0.92rem] font-medium transition-colors ${
             noneSelected
-              ? 'border-salvia-600 bg-salvia-600 text-white'
-              : 'border-stone-300 bg-white text-stone-600 hover:border-salvia-500 hover:text-salvia-800'
+              ? 'border-salvia-500 bg-salvia-50 text-salvia-800'
+              : 'border-stone-300 bg-white text-stone-500 hover:border-salvia-400 hover:text-salvia-700'
           }`}
         >
           {noneSelected && <Check className="size-4" strokeWidth={3} aria-hidden />}
@@ -119,10 +119,10 @@ export function NoneToggle({
       type="button"
       aria-pressed={checked}
       onClick={() => onChange(!checked)}
-      className={`mt-2 inline-flex min-h-10 items-center gap-1.5 rounded-xl border-2 border-dashed px-3 py-1 text-sm font-bold transition-colors ${
+      className={`mt-2 inline-flex h-9 items-center gap-1.5 rounded-xl border border-dashed px-3 text-sm font-medium transition-colors ${
         checked
-          ? 'border-salvia-600 bg-salvia-600 text-white'
-          : 'border-stone-300 bg-white text-stone-600 hover:border-salvia-500 hover:text-salvia-800'
+          ? 'border-salvia-500 bg-salvia-50 text-salvia-800'
+          : 'border-stone-300 bg-white text-stone-500 hover:border-salvia-400 hover:text-salvia-700'
       }`}
     >
       {checked && <Check className="size-4" strokeWidth={3} aria-hidden />}

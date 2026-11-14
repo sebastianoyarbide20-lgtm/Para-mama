@@ -31,7 +31,7 @@ export function FieldShell({
 }: FieldShellProps) {
   return (
     <div className={className}>
-      <label htmlFor={htmlFor} className="mb-1.5 block font-semibold text-stone-800">
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-semibold text-stone-700">
         {label}
         {required && (
           <span className="text-rosa-600" aria-hidden="true">
@@ -224,22 +224,23 @@ export function Segmented<T extends string>({
   const name = useId();
   return (
     <fieldset>
-      <legend className="mb-1.5 block font-semibold text-stone-800">
+      <legend className="mb-1.5 block text-sm font-semibold text-stone-700">
         {label}
         {optional && <span className="ml-1 text-sm font-normal text-stone-500">(opcional)</span>}
       </legend>
-      <div className="flex flex-wrap gap-2">
+      {/* Control segmentado: las opciones van juntas en una "pastilla". */}
+      <div className="inline-flex flex-wrap gap-1 rounded-xl bg-stone-900/[0.045] p-1 ring-1 ring-inset ring-stone-900/[0.04]">
         {options.map((opt) => {
           const checked = value === opt.value;
           return (
             <label
               key={opt.value}
-              className={`relative cursor-pointer rounded-xl border-2 font-semibold transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-rosa-400 ${
-                size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'
+              className={`relative cursor-pointer rounded-lg font-semibold transition-all duration-150 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-rosa-300 ${
+                size === 'sm' ? 'px-3 py-1 text-sm' : 'px-4 py-1.5 text-[0.95rem]'
               } ${
                 checked
-                  ? 'border-rosa-500 bg-rosa-50 text-rosa-800'
-                  : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300'
+                  ? 'bg-white text-rosa-700 shadow-[0_1px_3px_rgb(61_21_34/0.12)]'
+                  : 'text-stone-600 hover:bg-white/60 hover:text-stone-900'
               }`}
             >
               <input
@@ -284,13 +285,13 @@ export function Toggle({
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors ${
-          checked ? 'bg-salvia-600' : 'bg-stone-300'
+        className={`relative mt-0.5 inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${
+          checked ? 'bg-salvia-500' : 'bg-stone-300'
         }`}
       >
         <span
-          className={`inline-block size-6 rounded-full bg-white shadow transition-transform ${
-            checked ? 'translate-x-7' : 'translate-x-1'
+          className={`inline-block size-5 rounded-full bg-white shadow-md transition-transform duration-200 ${
+            checked ? 'translate-x-6' : 'translate-x-1'
           }`}
         />
       </button>

@@ -118,6 +118,7 @@ export function CatalogPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Mis datos"
         back={
           <Link
             to="/mis-datos"

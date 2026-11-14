@@ -59,16 +59,16 @@ export function Modal({
       onClick={(e) => {
         if (e.target === ref.current) onCloseRef.current();
       }}
-      className={`m-auto max-h-[92dvh] w-[calc(100%-1.5rem)] overflow-hidden rounded-2xl bg-white p-0 text-stone-800 shadow-2xl ${widths[size]} open:flex open:flex-col ${
+      className={`m-auto max-h-[90dvh] w-[calc(100%-1.5rem)] overflow-hidden rounded-3xl bg-white p-0 text-stone-800 shadow-pop ring-1 ring-stone-900/5 ${widths[size]} open:flex open:flex-col ${
         // Las ventanas grandes (formularios largos) ocupan toda la pantalla en el celular.
         size === 'xl' ? 'max-sm:h-dvh max-sm:max-h-dvh max-sm:w-full max-sm:max-w-none max-sm:rounded-none' : ''
       }`}
     >
       {open && (
         <>
-          <header className="flex items-start justify-between gap-3 border-b border-stone-100 px-5 pt-4 pb-3">
+          <header className="flex items-start justify-between gap-3 border-b border-stone-100 px-6 pt-5 pb-4">
             <div>
-              <h2 id={titleId} className="text-xl font-bold text-stone-900">
+              <h2 id={titleId} className="font-display text-[1.45rem] leading-tight font-semibold text-stone-900">
                 {title}
               </h2>
               {description && (
@@ -84,9 +84,9 @@ export function Modal({
               <X className="size-5" />
             </button>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
           {footer && (
-            <footer className="flex flex-wrap-reverse justify-end gap-2 border-t border-stone-100 bg-stone-50/60 px-5 py-3">
+            <footer className="flex flex-wrap-reverse justify-end gap-2 border-t border-stone-100 bg-stone-50/70 px-6 py-3.5">
               {footer}
             </footer>
           )}

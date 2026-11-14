@@ -5,23 +5,30 @@ export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'succ
 export type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors select-none ' +
-  'disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-offset-2 text-center leading-tight';
+  'inline-flex items-center justify-center gap-2 rounded-xl font-semibold select-none whitespace-nowrap ' +
+  'transition-[background-color,box-shadow,transform,color] duration-150 active:translate-y-px ' +
+  'disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-offset-2 text-center leading-tight';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-rosa-600 text-white shadow-sm hover:bg-rosa-700 active:bg-rosa-800',
-  secondary: 'bg-white text-stone-800 ring-1 ring-inset ring-stone-300 shadow-xs hover:bg-stone-50 active:bg-stone-100',
-  soft: 'bg-rosa-50 text-rosa-800 ring-1 ring-inset ring-rosa-200 hover:bg-rosa-100 active:bg-rosa-200',
-  ghost: 'text-stone-700 hover:bg-stone-100 active:bg-stone-200',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800',
-  success: 'bg-salvia-600 text-white shadow-sm hover:bg-salvia-700 active:bg-salvia-800',
+  primary:
+    'bg-rosa-600 bg-linear-to-b from-rosa-500 to-rosa-600 text-white hover:from-rosa-600 hover:to-rosa-700 ' +
+    'shadow-[inset_0_1px_0_rgb(255_255_255/0.22),0_10px_24px_-12px_rgb(176_63_88/0.75)]',
+  secondary:
+    'bg-white text-stone-800 ring-1 ring-inset ring-stone-200 shadow-[0_1px_2px_rgb(61_21_34/0.05)] ' +
+    'hover:bg-stone-50 hover:ring-stone-300',
+  soft: 'bg-rosa-50 text-rosa-700 hover:bg-rosa-100 active:bg-rosa-200',
+  ghost: 'text-stone-600 hover:bg-stone-900/[0.05] hover:text-stone-900',
+  danger: 'bg-red-600 bg-linear-to-b from-red-500 to-red-600 text-white shadow-sm hover:from-red-600 hover:to-red-700',
+  success:
+    'bg-salvia-600 bg-linear-to-b from-salvia-500 to-salvia-600 text-white hover:from-salvia-600 hover:to-salvia-700 ' +
+    'shadow-[inset_0_1px_0_rgb(255_255_255/0.2),0_10px_24px_-12px_rgb(66_106_82/0.7)]',
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: 'min-h-9 px-3 py-1.5 text-sm',
-  md: 'min-h-11 px-4 py-2 text-base',
-  lg: 'min-h-13 px-5 py-3 text-lg',
-  xl: 'min-h-16 px-6 py-4 text-xl',
+  sm: 'h-9 px-3 text-sm',
+  md: 'h-11 px-4 text-[0.95rem]',
+  lg: 'h-12 px-5 text-base',
+  xl: 'h-14 px-7 text-lg',
 };
 
 export function buttonClasses(variant: ButtonVariant = 'primary', size: ButtonSize = 'md', extra = ''): string {
@@ -91,7 +98,7 @@ export function IconButton({
       type="button"
       aria-label={label}
       title={label}
-      className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors disabled:opacity-40 ${toneClass} ${className}`}
+      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${toneClass} ${className}`}
       {...props}
     >
       {children}

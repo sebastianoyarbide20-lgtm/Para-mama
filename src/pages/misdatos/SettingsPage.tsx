@@ -133,8 +133,9 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-6xl gap-6 xl:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid [&>header]:[column-span:all]">
       <PageHeader
+        eyebrow="Mis datos"
         back={
           <Link
             to="/mis-datos"

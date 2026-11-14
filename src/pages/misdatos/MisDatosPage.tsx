@@ -28,6 +28,7 @@ export function MisDatosPage() {
   return (
     <div>
       <PageHeader
+        eyebrow="Mis datos"
         title="Mis datos"
         subtitle="Tus listas, tus clientas y la copia de seguridad."
         actions={
@@ -38,11 +39,11 @@ export function MisDatosPage() {
       />
 
       <section aria-labelledby="listas-sesion" className="mb-8">
-        <h2 id="listas-sesion" className="mb-1 text-xl font-extrabold text-stone-900">
+        <h2 id="listas-sesion" className="mb-1 font-display text-xl font-semibold text-stone-900">
           Listas para las sesiones
         </h2>
         <p className="mb-3 text-stone-600">Lo que elegís cuando registrás una sesión. Tocá una lista para editarla.</p>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {sessionLists.map((c) => (
             <li key={c.id}>
               <Tile
@@ -58,7 +59,7 @@ export function MisDatosPage() {
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="flex h-full min-h-22 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-stone-300 p-4 text-left font-bold text-stone-600 transition-colors hover:border-rosa-400 hover:bg-rosa-50/50 hover:text-rosa-800"
+              className="group flex h-full min-h-24 w-full items-center gap-4 rounded-[1.25rem] border border-dashed border-stone-300 bg-white/40 p-5 text-left font-semibold text-stone-600 transition-all hover:border-rosa-300 hover:bg-white hover:text-rosa-700 hover:shadow-card"
             >
               <ListPlus className="size-7 shrink-0" aria-hidden />
               <span>
@@ -71,10 +72,10 @@ export function MisDatosPage() {
       </section>
 
       <section aria-labelledby="clientas-datos" className="mb-8">
-        <h2 id="clientas-datos" className="mb-3 text-xl font-extrabold text-stone-900">
+        <h2 id="clientas-datos" className="mb-3 font-display text-xl font-semibold text-stone-900">
           Clientas y fichas
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <Tile
               to="/clientas"
@@ -109,10 +110,10 @@ export function MisDatosPage() {
       </section>
 
       <section aria-labelledby="seguridad">
-        <h2 id="seguridad" className="mb-3 text-xl font-extrabold text-stone-900">
+        <h2 id="seguridad" className="mb-3 font-display text-xl font-semibold text-stone-900">
           Seguridad y ajustes
         </h2>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <li>
             <Tile
               to="/mis-datos/ajustes"
@@ -147,23 +148,28 @@ function Tile({
   badge?: string;
 }) {
   return (
-    <Link
-      to={to}
-      className="flex h-full min-h-22 items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200/80 transition-colors hover:bg-rosa-50/50 hover:ring-rosa-200"
-    >
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-crema" aria-hidden>
+    <Link to={to} className="card card-hover group flex h-full min-h-24 items-center gap-4 p-5">
+      <span
+        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-stone-50 to-rosa-50/70 text-2xl ring-1 ring-stone-900/[0.04] ring-inset transition-transform duration-300 group-hover:scale-105"
+        aria-hidden
+      >
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2 text-lg font-bold text-stone-900">
+        <span className="flex items-center gap-2 font-semibold text-stone-900">
           {title}
           {badge && (
-            <span className="rounded-full bg-salvia-100 px-2 py-0.5 text-xs font-bold text-salvia-800">{badge}</span>
+            <span className="rounded-full bg-salvia-50 px-2 py-0.5 text-[0.7rem] font-bold text-salvia-700 ring-1 ring-salvia-200/70 ring-inset">
+              {badge}
+            </span>
           )}
         </span>
-        <span className="block text-stone-600">{text}</span>
+        <span className="block text-sm text-stone-500">{text}</span>
       </span>
-      <ChevronRight className="size-6 shrink-0 text-stone-400" aria-hidden />
+      <ChevronRight
+        className="size-5 shrink-0 text-stone-300 transition-all group-hover:translate-x-0.5 group-hover:text-rosa-500"
+        aria-hidden
+      />
     </Link>
   );
 }

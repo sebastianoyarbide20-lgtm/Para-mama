@@ -73,14 +73,14 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   };
 
   const toneStyles: Record<ToastTone, string> = {
-    success: 'bg-salvia-700 text-white',
-    error: 'bg-red-700 text-white',
-    info: 'bg-stone-800 text-white',
+    success: 'bg-salvia-500/15 text-salvia-300',
+    error: 'bg-red-500/15 text-red-300',
+    info: 'bg-white/10 text-stone-200',
   };
   const toneIcons: Record<ToastTone, ReactNode> = {
-    success: <CircleCheck className="size-6 shrink-0" />,
-    error: <CircleAlert className="size-6 shrink-0" />,
-    info: <Info className="size-6 shrink-0" />,
+    success: <CircleCheck className="size-5" />,
+    error: <CircleAlert className="size-5" />,
+    info: <Info className="size-5" />,
   };
 
   return (
@@ -91,20 +91,22 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         <div
           aria-live="polite"
           role="status"
-          className="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-3 lg:top-auto lg:right-6 lg:bottom-6 lg:left-auto lg:items-end"
+          className="pointer-events-none fixed right-6 bottom-6 z-50 flex w-[min(26rem,calc(100%-2rem))] flex-col items-end gap-2"
         >
           {toasts.map((t) => (
             <div
               key={t.id}
-              className={`animate-toast-in pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl px-4 py-3 font-semibold shadow-lg ${toneStyles[t.tone]}`}
+              className="animate-toast-in pointer-events-auto flex w-full items-center gap-3 rounded-2xl bg-stone-900/95 px-3.5 py-3 text-[0.95rem] font-medium text-white shadow-pop ring-1 ring-white/10 backdrop-blur"
             >
-              {toneIcons[t.tone]}
+              <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${toneStyles[t.tone]}`}>
+                {toneIcons[t.tone]}
+              </span>
               <span className="flex-1">{t.message}</span>
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Cerrar aviso"
-                className="inline-flex size-8 items-center justify-center rounded-lg hover:bg-white/15"
+                className="inline-flex size-8 items-center justify-center rounded-lg text-stone-400 hover:bg-white/10 hover:text-white"
               >
                 <X className="size-4" />
               </button>

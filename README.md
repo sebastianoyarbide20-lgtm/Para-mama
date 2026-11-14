@@ -165,6 +165,12 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
 ## Detalles técnicos
 
 - **Stack**: React 19 + Vite 7 + TypeScript, Tailwind CSS 4, Dexie (IndexedDB), Recharts, React Router 7, íconos Lucide.
+- **Diseño** (pensado para usar en PC): barra lateral con submenús por sector, barra superior con la ubicación y la
+  fecha, tarjetas blancas con sombras suaves sobre un fondo cálido, títulos en _Fraunces_ y texto en _Plus Jakarta
+  Sans_ (incluidas en la app, funcionan sin internet). Los colores y sombras están en `src/index.css` (`@theme`).
+  Movimiento sutil: las pantallas entran con un fundido, los números de los indicadores cuentan hasta su valor y los
+  gráficos se dibujan al cargar (todo se desactiva si el sistema pide «reducir movimiento»). En pantallas chicas la
+  app sigue funcionando con la barra inferior.
 - **Estructura**:
 
   ```

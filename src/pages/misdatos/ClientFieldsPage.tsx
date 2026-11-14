@@ -55,8 +55,9 @@ export function ClientFieldsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl gap-6 xl:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid [&>header]:[column-span:all]">
       <PageHeader
+        eyebrow="Mis datos"
         back={
           <Link
             to="/mis-datos"
@@ -74,7 +75,7 @@ export function ClientFieldsPage() {
         }
       />
 
-      <Card title="Tus campos" className="mb-5">
+      <Card title="Tus campos">
         {clientFields.length === 0 ? (
           <EmptyState
             compact

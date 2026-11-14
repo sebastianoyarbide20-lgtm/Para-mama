@@ -123,18 +123,22 @@ export function CatalogPicker({
   };
 
   return (
-    <fieldset className={bare ? '' : 'rounded-2xl bg-white p-4 shadow-sm ring-1 ring-stone-200/80 sm:p-5'}>
+    <fieldset className={bare ? '' : 'card p-5 xl:p-6'}>
       <legend className="sr-only">{label ?? catalog.sessionLabel}</legend>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3
-          className={`flex items-center gap-2 font-bold text-stone-900 ${bare ? 'text-base' : 'text-lg'}`}
+          className={`flex items-center gap-2.5 font-bold ${bare ? 'text-sm text-stone-700' : 'text-[1.05rem] text-stone-900'}`}
           aria-hidden
         >
-          {!bare && <span>{catalog.icon}</span>}
+          {!bare && (
+            <span className="flex size-8 items-center justify-center rounded-lg bg-stone-50 text-base ring-1 ring-stone-200/60 ring-inset">
+              {catalog.icon}
+            </span>
+          )}
           {label ?? catalog.sessionLabel}
         </h3>
         {value.length > 0 && (
-          <span className="rounded-full bg-rosa-100 px-2.5 py-0.5 text-sm font-bold text-rosa-800">
+          <span className="rounded-full bg-rosa-50 px-2.5 py-0.5 text-xs font-bold text-rosa-700 ring-1 ring-rosa-200/70 ring-inset">
             {value.length} {value.length === 1 ? 'elegido' : 'elegidos'}
           </span>
         )}
@@ -154,7 +158,7 @@ export function CatalogPicker({
             return (
               <li
                 key={sel.itemId}
-                className={`flex flex-wrap items-center gap-2 rounded-xl bg-rosa-50 p-2 ${missing ? 'ring-2 ring-amber-400' : ''}`}
+                className={`flex flex-wrap items-center gap-2 rounded-xl bg-rosa-50/70 p-2 ring-1 ring-inset transition-shadow ${missing ? 'ring-2 ring-amber-400' : 'ring-rosa-100'}`}
               >
                 <span className="flex min-w-0 flex-1 basis-40 items-center gap-2 pl-1 font-semibold text-rosa-900">
                   <Check className="size-4 shrink-0" aria-hidden />
@@ -243,10 +247,10 @@ export function CatalogPicker({
               type="button"
               aria-pressed={selected}
               onClick={() => toggle(item.id!)}
-              className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 px-4 py-1.5 text-left font-semibold transition-colors ${
+              className={`inline-flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-left text-[0.92rem] font-medium transition-all duration-150 ${
                 selected
-                  ? 'border-rosa-600 bg-rosa-600 text-white shadow-sm'
-                  : 'border-stone-200 bg-white text-stone-700 hover:border-rosa-300 hover:bg-rosa-50'
+                  ? 'bg-linear-to-b from-rosa-500 to-rosa-600 text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]'
+                  : 'bg-white text-stone-700 ring-1 ring-stone-200 ring-inset hover:-translate-y-px hover:text-rosa-700 hover:ring-rosa-300'
               }`}
             >
               {selected && <Check className="size-4 shrink-0" aria-hidden />}
@@ -260,7 +264,7 @@ export function CatalogPicker({
             type="button"
             onClick={() => void addNew()}
             disabled={adding}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-dashed border-salvia-500 bg-salvia-50 px-4 py-1.5 font-bold text-salvia-800 hover:bg-salvia-100"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-salvia-400 bg-salvia-50 px-3.5 text-[0.92rem] font-semibold text-salvia-800 hover:bg-salvia-100"
           >
             <Plus className="size-4" aria-hidden />
             Agregar «{query.trim()}»
@@ -271,7 +275,7 @@ export function CatalogPicker({
           <button
             type="button"
             onClick={focusSearch}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-dashed border-stone-300 px-4 py-1.5 font-semibold text-stone-600 hover:border-salvia-500 hover:text-salvia-800"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-dashed border-stone-300 px-3.5 text-[0.92rem] font-medium text-stone-500 hover:border-salvia-400 hover:text-salvia-700"
           >
             <Plus className="size-4" aria-hidden />
             Agregar nuevo

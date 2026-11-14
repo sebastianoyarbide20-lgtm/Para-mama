@@ -10,12 +10,24 @@ import { SearchInput } from './ui/Fields';
 import { useToast } from './ui/Feedback';
 import { ClientForm } from './ClientForm';
 
+/** Tonos suaves para los avatares: cada clienta tiene siempre el mismo (según su nombre). */
+const AVATAR_TONES = [
+  'from-rosa-100 to-rosa-200 text-rosa-800',
+  'from-violet-100 to-violet-200 text-violet-800',
+  'from-salvia-100 to-salvia-200 text-salvia-800',
+  'from-amber-100 to-amber-200 text-amber-800',
+  'from-sky-100 to-sky-200 text-sky-800',
+];
+
 export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
-  const sizes = { sm: 'size-9 text-sm', md: 'size-11 text-base', lg: 'size-16 text-2xl' };
+  const sizes = { sm: 'size-9 text-[0.8rem]', md: 'size-10 text-sm', lg: 'size-16 text-xl' };
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const tone = AVATAR_TONES[hash % AVATAR_TONES.length];
   return (
     <span
       aria-hidden
-      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-rosa-100 font-extrabold text-rosa-800 ${sizes[size]}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-linear-to-br font-bold ring-2 ring-white ${tone} ${sizes[size]}`}
     >
       {initials(name) || '?'}
     </span>

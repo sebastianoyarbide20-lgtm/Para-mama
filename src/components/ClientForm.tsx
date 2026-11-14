@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { CircleAlert, ListPlus, Save } from 'lucide-react';
+import { Check, CircleAlert, ListPlus, Save } from 'lucide-react';
 import type { ClientField, CustomFieldValue, FacialAnalysis, YesNoValue } from '../db/types';
 import type { ClientInput } from '../db/actions';
 import { useBuiltinCatalogs, useData } from '../hooks/useData';
@@ -138,349 +138,359 @@ export function ClientForm({
 
   return (
     <>
-      <form onSubmit={submit} className="space-y-5" noValidate>
-        {attempted && missing.length > 0 && (
-          <div role="alert" className="rounded-2xl bg-red-50 p-4 text-red-900 ring-1 ring-red-200">
-            <p className="flex items-center gap-2 font-bold">
-              <CircleAlert className="size-5 shrink-0" aria-hidden />
-              Para guardar, completá estos puntos de la ficha:
-            </p>
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {missing.map((m) => (
-                <li key={m.target}>
-                  <button
-                    type="button"
-                    onClick={() => goToField(m.target)}
-                    className="rounded-full bg-white px-3 py-1 text-sm font-bold text-red-800 underline-offset-2 ring-1 ring-red-200 hover:underline"
-                  >
-                    {m.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <Section n={1} title="Datos personales">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              id="client-firstName"
-              label="Nombre"
-              required
-              value={form.firstName}
-              onValueChange={(v) => {
-                set('firstName', v);
-                if (errors.firstName) setErrors((er) => ({ ...er, firstName: undefined }));
-              }}
-              error={errors.firstName}
-              autoComplete="off"
-              autoFocus={!initial.firstName}
-            />
-            <TextField
-              label="Apellido"
-              value={form.lastName}
-              onValueChange={(v) => set('lastName', v)}
-              autoComplete="off"
-            />
-            <TextField
-              id="ficha-nacimiento"
-              label="Fecha de nacimiento"
-              required
-              type="date"
-              value={form.birthDate}
-              max={todayISO()}
-              onValueChange={(v) => set('birthDate', v)}
-              hint={age !== null ? `Edad: ${age} años` : undefined}
-              error={isMissing('ficha-nacimiento') ? 'Completá la fecha de nacimiento.' : null}
-            />
-            <div id="ficha-genero" className="scroll-mt-28">
-              <Segmented
-                label={<RequiredLabel>Género</RequiredLabel>}
-                value={form.gender}
-                options={GENDER_OPTIONS}
-                onChange={(v) => set('gender', v)}
-              />
-              {isMissing('ficha-genero') && <FieldError>Elegí una opción.</FieldError>}
-            </div>
-            <TextField
-              label="Teléfono"
-              type="tel"
-              inputMode="tel"
-              value={form.phone}
-              onValueChange={(v) => set('phone', v)}
-              placeholder="Ej: 11 5555-1234"
-            />
-            <TextField
-              id="client-email"
-              label="Email"
-              type="email"
-              inputMode="email"
-              value={form.email}
-              onValueChange={(v) => {
-                set('email', v);
-                if (errors.email) setErrors((er) => ({ ...er, email: undefined }));
-              }}
-              error={errors.email}
-            />
-            <div id="ficha-ultimo" className="scroll-mt-28 sm:col-span-2">
-              <TextField
-                label="Fecha del último tratamiento"
-                required
-                type="date"
-                value={form.lastTreatmentDate}
-                max={todayISO()}
-                disabled={form.noPreviousTreatment}
-                onValueChange={(v) => set('lastTreatmentDate', v)}
-                hint="El último tratamiento estético que se hizo antes de venir."
-                wrapperClassName="sm:max-w-xs"
-                error={isMissing('ficha-ultimo') ? 'Poné la fecha o marcá que nunca se hizo uno.' : null}
-              />
-              <NoneToggle
-                checked={form.noPreviousTreatment}
-                onChange={(v) =>
-                  setForm((f) => ({ ...f, noPreviousTreatment: v, lastTreatmentDate: v ? '' : f.lastTreatmentDate }))
-                }
-              >
-                Nunca se hizo un tratamiento
-              </NoneToggle>
-            </div>
-          </div>
-        </Section>
-
-        <Section n={2} title="Historia clínica y hábitos">
-          <div className="space-y-6">
-            <div id="ficha-alergias" className="scroll-mt-28">
-              <TextArea
-                label="Alergias: mencioná cuáles"
-                required
-                value={form.allergies}
-                disabled={form.noAllergies}
-                onValueChange={(v) => set('allergies', v)}
-                rows={2}
-                placeholder="Ej: látex, ácido salicílico, penicilina…"
-                error={isMissing('ficha-alergias') ? 'Escribí cuáles o marcá «No tiene alergias».' : null}
-              />
-              <NoneToggle
-                checked={form.noAllergies}
-                onChange={(v) => setForm((f) => ({ ...f, noAllergies: v, allergies: v ? '' : f.allergies }))}
-              >
-                No tiene alergias
-              </NoneToggle>
-            </div>
-            <Checklist
-              id="ficha-habitos"
-              label="Hábitos"
-              options={HABITS}
-              value={form.habits}
-              onChange={(v) => set('habits', v)}
-              noneLabel="Ninguno"
-              error={isMissing('ficha-habitos')}
-            />
-            <Checklist
-              id="ficha-cuidados"
-              label="Cuidados domiciliarios"
-              hint="Lo que ya usa en su casa."
-              options={HOME_CARE}
-              value={form.homeCare}
-              onChange={(v) => set('homeCare', v)}
-              noneLabel="Ninguna"
-              error={isMissing('ficha-cuidados')}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <TextArea
-                label="Medicación / pastillas que toma"
-                optional
-                value={form.medication}
-                onValueChange={(v) => set('medication', v)}
-                rows={2}
-                placeholder="Ej: anticonceptivos, levotiroxina…"
-              />
-              <TextArea
-                label="Antecedentes relevantes"
-                optional
-                value={form.history}
-                onValueChange={(v) => set('history', v)}
-                rows={2}
-                placeholder="Ej: acné, rosácea, cirugías…"
-              />
-            </div>
-            <div className="grid items-end gap-4 sm:grid-cols-2">
-              <Segmented
-                label="¿Hace ejercicio?"
-                optional
-                value={form.exercises}
-                options={YES_NO_OPTIONS}
-                onChange={(v) => set('exercises', v)}
-              />
-              {form.exercises === 'si' && (
-                <TextField
-                  label="¿Con qué frecuencia?"
-                  value={form.exerciseFrequency}
-                  onValueChange={(v) => set('exerciseFrequency', v)}
-                  placeholder="Ej: 3 veces por semana"
-                />
-              )}
-            </div>
-          </div>
-        </Section>
-
-        <Section n={3} title="Tipo de piel y escala de Fitzpatrick">
-          <div className="space-y-6">
-            <div id="ficha-piel" className="scroll-mt-28">
-              {skinTypes && (
-                <CatalogPicker
-                  bare
-                  catalog={skinTypes}
-                  label="Tipo de piel *"
-                  items={itemsByCatalog.get(skinTypes.id!) ?? []}
-                  value={form.skinTypeId ? [{ itemId: form.skinTypeId }] : []}
-                  onChange={(v) => set('skinTypeId', v[0]?.itemId ?? null)}
-                />
-              )}
-              {isMissing('ficha-piel') && <FieldError>Elegí el tipo de piel.</FieldError>}
-            </div>
-            <fieldset id="ficha-fitzpatrick" className="scroll-mt-28">
-              <legend className="mb-1.5 font-semibold text-stone-800">
-                <RequiredLabel>Escala de Fitzpatrick</RequiredLabel>
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {FITZPATRICK.map((f) => {
-                  const checked = form.fitzpatrick === f.value;
-                  return (
-                    <label
-                      key={f.value}
-                      className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-colors has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-rosa-400 ${
-                        checked ? 'border-rosa-500 bg-rosa-50' : 'border-stone-200 bg-white hover:border-stone-300'
-                      }`}
+      <div className={inModal ? '' : 'grid items-start gap-6 xl:grid-cols-[15.5rem_minmax(0,1fr)]'}>
+        {!inModal && <FichaIndex missing={missing} done={done} />}
+        <form onSubmit={submit} className="min-w-0 space-y-6" noValidate>
+          {attempted && missing.length > 0 && (
+            <div role="alert" className="rounded-2xl bg-red-50 p-4 text-red-900 ring-1 ring-red-200">
+              <p className="flex items-center gap-2 font-bold">
+                <CircleAlert className="size-5 shrink-0" aria-hidden />
+                Para guardar, completá estos puntos de la ficha:
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {missing.map((m) => (
+                  <li key={m.target}>
+                    <button
+                      type="button"
+                      onClick={() => goToField(m.target)}
+                      className="rounded-full bg-white px-3 py-1 text-sm font-bold text-red-800 underline-offset-2 ring-1 ring-red-200 hover:underline"
                     >
-                      <input
-                        type="radio"
-                        name="fitzpatrick"
-                        value={f.value}
-                        checked={checked}
-                        onChange={() => set('fitzpatrick', f.value)}
-                        className="sr-only"
-                      />
-                      <span
-                        aria-hidden
-                        className="mt-0.5 size-8 shrink-0 rounded-full ring-2 ring-white ring-offset-1 ring-offset-stone-200"
-                        style={{ backgroundColor: f.color }}
-                      />
-                      <span>
-                        <span className={`block font-bold ${checked ? 'text-rosa-800' : 'text-stone-900'}`}>
-                          {f.label}
-                        </span>
-                        <span className="block text-sm text-stone-600">{f.hint}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              {isMissing('ficha-fitzpatrick') && <FieldError>Elegí un tipo de la escala.</FieldError>}
-            </fieldset>
-          </div>
-        </Section>
-
-        <Section n={4} title="Análisis facial" subtitle="Si no ves nada en un grupo, marcá «Sin hallazgos».">
-          <div className="space-y-6">
-            {FACIAL_GROUPS.map((g) => (
-              <Checklist
-                key={g.key}
-                id={`ficha-facial-${g.key}`}
-                label={g.label}
-                options={g.options}
-                value={form.facial[g.key]}
-                onChange={(v) => setFacial(g.key, v)}
-                noneLabel="Sin hallazgos"
-                error={isMissing(`ficha-facial-${g.key}`)}
-              />
-            ))}
-          </div>
-        </Section>
-
-        <Section
-          n={5}
-          title="Condiciones del paciente"
-          subtitle="Importante para saber qué tratamientos y aparatos se pueden usar."
-        >
-          <Checklist
-            id="ficha-condiciones"
-            label="Marcá todas las que tenga"
-            options={CONDITIONS}
-            value={form.conditions}
-            onChange={(v) => set('conditions', v)}
-            noneLabel="Ninguna"
-            columns
-            error={isMissing('ficha-condiciones')}
-          />
-        </Section>
-
-        <Section
-          n={6}
-          title="Otros datos"
-          subtitle="Opcional."
-          actions={
-            <Button variant="soft" size="sm" icon={<ListPlus className="size-4" />} onClick={() => setFieldModal(true)}>
-              Agregar campo
-            </Button>
-          }
-        >
-          {clientFields.length > 0 && (
-            <div className="mb-5 grid gap-4 sm:grid-cols-2">
-              {clientFields.map((f) => (
-                <CustomFieldInput
-                  key={f.id}
-                  field={f}
-                  value={form.customFields[String(f.id)]}
-                  onChange={(v) => setCustom(f.id!, v)}
-                />
-              ))}
+                      {m.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
-          <TextArea
-            label="Notas generales"
-            value={form.notes}
-            onValueChange={(v) => set('notes', v)}
-            rows={3}
-            placeholder="Preferencias, horarios, cómo te conoció…"
-          />
-        </Section>
 
-        <div
-          className={`sticky z-20 flex items-center gap-2 rounded-2xl bg-white/95 p-2.5 shadow-lg ring-1 ring-stone-200 backdrop-blur sm:p-3 ${
-            inModal ? 'bottom-0' : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4'
-          }`}
-        >
-          <div className="min-w-0 flex-1" aria-live="polite">
-            <p
-              className={`text-sm font-bold whitespace-nowrap ${missing.length ? 'text-stone-600' : 'text-salvia-700'}`}
-            >
-              {missing.length ? `Ficha: ${done} de ${TOTAL_POINTS}` : 'Completa ✓'}
-            </p>
-            <div className="mt-1 h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-stone-200" aria-hidden>
-              <div
-                className={`h-full rounded-full transition-all ${missing.length ? 'bg-rosa-500' : 'bg-salvia-600'}`}
-                style={{ width: `${(done / TOTAL_POINTS) * 100}%` }}
+          <Section n={1} title="Datos personales">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                id="client-firstName"
+                label="Nombre"
+                required
+                value={form.firstName}
+                onValueChange={(v) => {
+                  set('firstName', v);
+                  if (errors.firstName) setErrors((er) => ({ ...er, firstName: undefined }));
+                }}
+                error={errors.firstName}
+                autoComplete="off"
+                autoFocus={!initial.firstName}
               />
+              <TextField
+                label="Apellido"
+                value={form.lastName}
+                onValueChange={(v) => set('lastName', v)}
+                autoComplete="off"
+              />
+              <TextField
+                id="ficha-nacimiento"
+                label="Fecha de nacimiento"
+                required
+                type="date"
+                value={form.birthDate}
+                max={todayISO()}
+                onValueChange={(v) => set('birthDate', v)}
+                hint={age !== null ? `Edad: ${age} años` : undefined}
+                error={isMissing('ficha-nacimiento') ? 'Completá la fecha de nacimiento.' : null}
+              />
+              <div id="ficha-genero" className="scroll-mt-28">
+                <Segmented
+                  label={<RequiredLabel>Género</RequiredLabel>}
+                  value={form.gender}
+                  options={GENDER_OPTIONS}
+                  onChange={(v) => set('gender', v)}
+                />
+                {isMissing('ficha-genero') && <FieldError>Elegí una opción.</FieldError>}
+              </div>
+              <TextField
+                label="Teléfono"
+                type="tel"
+                inputMode="tel"
+                value={form.phone}
+                onValueChange={(v) => set('phone', v)}
+                placeholder="Ej: 11 5555-1234"
+              />
+              <TextField
+                id="client-email"
+                label="Email"
+                type="email"
+                inputMode="email"
+                value={form.email}
+                onValueChange={(v) => {
+                  set('email', v);
+                  if (errors.email) setErrors((er) => ({ ...er, email: undefined }));
+                }}
+                error={errors.email}
+              />
+              <div id="ficha-ultimo" className="scroll-mt-28 sm:col-span-2">
+                <TextField
+                  label="Fecha del último tratamiento"
+                  required
+                  type="date"
+                  value={form.lastTreatmentDate}
+                  max={todayISO()}
+                  disabled={form.noPreviousTreatment}
+                  onValueChange={(v) => set('lastTreatmentDate', v)}
+                  hint="El último tratamiento estético que se hizo antes de venir."
+                  wrapperClassName="sm:max-w-xs"
+                  error={isMissing('ficha-ultimo') ? 'Poné la fecha o marcá que nunca se hizo uno.' : null}
+                />
+                <NoneToggle
+                  checked={form.noPreviousTreatment}
+                  onChange={(v) =>
+                    setForm((f) => ({ ...f, noPreviousTreatment: v, lastTreatmentDate: v ? '' : f.lastTreatmentDate }))
+                  }
+                >
+                  Nunca se hizo un tratamiento
+                </NoneToggle>
+              </div>
             </div>
-          </div>
-          {/* En el celular se cancela con «Volver» o la X de la ventana; así los botones entran en un renglón. */}
-          <span className="hidden sm:block">
-            <Button variant="secondary" size="lg" onClick={onCancel}>
-              Cancelar
-            </Button>
-          </span>
-          <Button
-            type="submit"
-            size="lg"
-            disabled={saving}
-            className="whitespace-nowrap"
-            icon={<Save className="hidden size-5 sm:block" />}
+          </Section>
+
+          <Section n={2} title="Historia clínica y hábitos">
+            <div className="space-y-6">
+              <div id="ficha-alergias" className="scroll-mt-28">
+                <TextArea
+                  label="Alergias: mencioná cuáles"
+                  required
+                  value={form.allergies}
+                  disabled={form.noAllergies}
+                  onValueChange={(v) => set('allergies', v)}
+                  rows={2}
+                  placeholder="Ej: látex, ácido salicílico, penicilina…"
+                  error={isMissing('ficha-alergias') ? 'Escribí cuáles o marcá «No tiene alergias».' : null}
+                />
+                <NoneToggle
+                  checked={form.noAllergies}
+                  onChange={(v) => setForm((f) => ({ ...f, noAllergies: v, allergies: v ? '' : f.allergies }))}
+                >
+                  No tiene alergias
+                </NoneToggle>
+              </div>
+              <Checklist
+                id="ficha-habitos"
+                label="Hábitos"
+                options={HABITS}
+                value={form.habits}
+                onChange={(v) => set('habits', v)}
+                noneLabel="Ninguno"
+                error={isMissing('ficha-habitos')}
+              />
+              <Checklist
+                id="ficha-cuidados"
+                label="Cuidados domiciliarios"
+                hint="Lo que ya usa en su casa."
+                options={HOME_CARE}
+                value={form.homeCare}
+                onChange={(v) => set('homeCare', v)}
+                noneLabel="Ninguna"
+                error={isMissing('ficha-cuidados')}
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextArea
+                  label="Medicación / pastillas que toma"
+                  optional
+                  value={form.medication}
+                  onValueChange={(v) => set('medication', v)}
+                  rows={2}
+                  placeholder="Ej: anticonceptivos, levotiroxina…"
+                />
+                <TextArea
+                  label="Antecedentes relevantes"
+                  optional
+                  value={form.history}
+                  onValueChange={(v) => set('history', v)}
+                  rows={2}
+                  placeholder="Ej: acné, rosácea, cirugías…"
+                />
+              </div>
+              <div className="grid items-end gap-4 sm:grid-cols-2">
+                <Segmented
+                  label="¿Hace ejercicio?"
+                  optional
+                  value={form.exercises}
+                  options={YES_NO_OPTIONS}
+                  onChange={(v) => set('exercises', v)}
+                />
+                {form.exercises === 'si' && (
+                  <TextField
+                    label="¿Con qué frecuencia?"
+                    value={form.exerciseFrequency}
+                    onValueChange={(v) => set('exerciseFrequency', v)}
+                    placeholder="Ej: 3 veces por semana"
+                  />
+                )}
+              </div>
+            </div>
+          </Section>
+
+          <Section n={3} title="Tipo de piel y escala de Fitzpatrick">
+            <div className="space-y-6">
+              <div id="ficha-piel" className="scroll-mt-28">
+                {skinTypes && (
+                  <CatalogPicker
+                    bare
+                    catalog={skinTypes}
+                    label="Tipo de piel *"
+                    items={itemsByCatalog.get(skinTypes.id!) ?? []}
+                    value={form.skinTypeId ? [{ itemId: form.skinTypeId }] : []}
+                    onChange={(v) => set('skinTypeId', v[0]?.itemId ?? null)}
+                  />
+                )}
+                {isMissing('ficha-piel') && <FieldError>Elegí el tipo de piel.</FieldError>}
+              </div>
+              <fieldset id="ficha-fitzpatrick" className="scroll-mt-28">
+                <legend className="mb-1.5 font-semibold text-stone-800">
+                  <RequiredLabel>Escala de Fitzpatrick</RequiredLabel>
+                </legend>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {FITZPATRICK.map((f) => {
+                    const checked = form.fitzpatrick === f.value;
+                    return (
+                      <label
+                        key={f.value}
+                        className={`flex cursor-pointer items-start gap-3 rounded-2xl p-3 transition-all duration-150 has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-rosa-300 ${
+                          checked
+                            ? 'bg-rosa-50 ring-2 ring-rosa-400 ring-inset'
+                            : 'bg-white ring-1 ring-stone-200 ring-inset hover:-translate-y-px hover:ring-stone-300'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="fitzpatrick"
+                          value={f.value}
+                          checked={checked}
+                          onChange={() => set('fitzpatrick', f.value)}
+                          className="sr-only"
+                        />
+                        <span
+                          aria-hidden
+                          className="mt-0.5 size-8 shrink-0 rounded-full ring-2 ring-white ring-offset-1 ring-offset-stone-200"
+                          style={{ backgroundColor: f.color }}
+                        />
+                        <span>
+                          <span className={`block font-bold ${checked ? 'text-rosa-800' : 'text-stone-900'}`}>
+                            {f.label}
+                          </span>
+                          <span className="block text-sm text-stone-600">{f.hint}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {isMissing('ficha-fitzpatrick') && <FieldError>Elegí un tipo de la escala.</FieldError>}
+              </fieldset>
+            </div>
+          </Section>
+
+          <Section n={4} title="Análisis facial" subtitle="Si no ves nada en un grupo, marcá «Sin hallazgos».">
+            <div className="space-y-6">
+              {FACIAL_GROUPS.map((g) => (
+                <Checklist
+                  key={g.key}
+                  id={`ficha-facial-${g.key}`}
+                  label={g.label}
+                  options={g.options}
+                  value={form.facial[g.key]}
+                  onChange={(v) => setFacial(g.key, v)}
+                  noneLabel="Sin hallazgos"
+                  error={isMissing(`ficha-facial-${g.key}`)}
+                />
+              ))}
+            </div>
+          </Section>
+
+          <Section
+            n={5}
+            title="Condiciones del paciente"
+            subtitle="Importante para saber qué tratamientos y aparatos se pueden usar."
           >
-            {saving ? 'Guardando…' : submitLabel}
-          </Button>
-        </div>
-      </form>
+            <Checklist
+              id="ficha-condiciones"
+              label="Marcá todas las que tenga"
+              options={CONDITIONS}
+              value={form.conditions}
+              onChange={(v) => set('conditions', v)}
+              noneLabel="Ninguna"
+              columns
+              error={isMissing('ficha-condiciones')}
+            />
+          </Section>
+
+          <Section
+            n={6}
+            title="Otros datos"
+            subtitle="Opcional."
+            actions={
+              <Button
+                variant="soft"
+                size="sm"
+                icon={<ListPlus className="size-4" />}
+                onClick={() => setFieldModal(true)}
+              >
+                Agregar campo
+              </Button>
+            }
+          >
+            {clientFields.length > 0 && (
+              <div className="mb-5 grid gap-4 sm:grid-cols-2">
+                {clientFields.map((f) => (
+                  <CustomFieldInput
+                    key={f.id}
+                    field={f}
+                    value={form.customFields[String(f.id)]}
+                    onChange={(v) => setCustom(f.id!, v)}
+                  />
+                ))}
+              </div>
+            )}
+            <TextArea
+              label="Notas generales"
+              value={form.notes}
+              onValueChange={(v) => set('notes', v)}
+              rows={3}
+              placeholder="Preferencias, horarios, cómo te conoció…"
+            />
+          </Section>
+
+          <div
+            className={`sticky z-20 flex items-center gap-2 rounded-2xl bg-white/95 p-2.5 shadow-lg ring-1 ring-stone-200 backdrop-blur sm:p-3 ${
+              inModal ? 'bottom-0' : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))] lg:bottom-4'
+            }`}
+          >
+            <div className="min-w-0 flex-1" aria-live="polite">
+              <p
+                className={`text-sm font-bold whitespace-nowrap ${missing.length ? 'text-stone-600' : 'text-salvia-700'}`}
+              >
+                {missing.length ? `Ficha: ${done} de ${TOTAL_POINTS}` : 'Completa ✓'}
+              </p>
+              <div className="mt-1 h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-stone-200" aria-hidden>
+                <div
+                  className={`h-full rounded-full transition-all ${missing.length ? 'bg-rosa-500' : 'bg-salvia-600'}`}
+                  style={{ width: `${(done / TOTAL_POINTS) * 100}%` }}
+                />
+              </div>
+            </div>
+            {/* En el celular se cancela con «Volver» o la X de la ventana; así los botones entran en un renglón. */}
+            <span className="hidden sm:block">
+              <Button variant="secondary" size="lg" onClick={onCancel}>
+                Cancelar
+              </Button>
+            </span>
+            <Button
+              type="submit"
+              size="lg"
+              disabled={saving}
+              className="whitespace-nowrap"
+              icon={<Save className="hidden size-5 sm:block" />}
+            >
+              {saving ? 'Guardando…' : submitLabel}
+            </Button>
+          </div>
+        </form>
+      </div>
       <ClientFieldModal open={fieldModal} onClose={() => setFieldModal(false)} />
     </>
   );
@@ -501,11 +511,13 @@ function Section({
 }) {
   return (
     <Card
+      id={`ficha-sec-${n}`}
+      className="scroll-mt-24"
       title={
         <span className="flex items-center gap-2.5">
           <span
             aria-hidden
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-rosa-600 text-base font-extrabold text-white"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-rosa-500 to-rosa-600 font-display text-base font-semibold text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]"
           >
             {n}
           </span>
@@ -567,4 +579,92 @@ function CustomFieldInput({
     default:
       return <TextField label={field.label} value={text} onValueChange={onChange} />;
   }
+}
+
+/** Secciones de la ficha y qué puntos obligatorios tiene cada una (para el índice lateral). */
+const SECTIONS: { n: number; title: string; targets: string[] }[] = [
+  { n: 1, title: 'Datos personales', targets: ['ficha-nacimiento', 'ficha-genero', 'ficha-ultimo'] },
+  { n: 2, title: 'Historia clínica y hábitos', targets: ['ficha-alergias', 'ficha-habitos', 'ficha-cuidados'] },
+  { n: 3, title: 'Piel y Fitzpatrick', targets: ['ficha-piel', 'ficha-fitzpatrick'] },
+  {
+    n: 4,
+    title: 'Análisis facial',
+    targets: ['ficha-facial-capilares', 'ficha-facial-sebaceas', 'ficha-facial-pigmentacion', 'ficha-facial-lineas'],
+  },
+  { n: 5, title: 'Condiciones del paciente', targets: ['ficha-condiciones'] },
+  { n: 6, title: 'Otros datos', targets: [] },
+];
+
+/** Índice fijo a la izquierda (PC): avance de la ficha y estado de cada sección. */
+function FichaIndex({ missing, done }: { missing: { target: string }[]; done: number }) {
+  const pct = Math.round((done / TOTAL_POINTS) * 100);
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  return (
+    <aside className="sticky top-24 hidden xl:block" aria-label="Índice de la ficha">
+      <div className="card p-5">
+        <div className="flex items-center gap-4">
+          <svg viewBox="0 0 64 64" className="size-16 shrink-0 -rotate-90" aria-hidden>
+            <circle cx="32" cy="32" r={r} fill="none" stroke="#f1ece8" strokeWidth="6" />
+            <circle
+              cx="32"
+              cy="32"
+              r={r}
+              fill="none"
+              stroke={pct === 100 ? '#548467' : '#c9566d'}
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={c}
+              strokeDashoffset={c * (1 - pct / 100)}
+              style={{ transition: 'stroke-dashoffset 600ms ease, stroke 300ms' }}
+            />
+          </svg>
+          <div>
+            <p className="eyebrow text-stone-400">Ficha inicial</p>
+            <p className="num font-display text-2xl font-semibold text-stone-900">{pct}%</p>
+            <p className="text-xs text-stone-500">
+              {done} de {TOTAL_POINTS} puntos
+            </p>
+          </div>
+        </div>
+        <ol className="mt-5 space-y-1">
+          {SECTIONS.map((sec) => {
+            const pending = sec.targets.filter((t) => missing.some((m) => m.target === t)).length;
+            const complete = sec.targets.length > 0 && pending === 0;
+            return (
+              <li key={sec.n}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(`ficha-sec-${sec.n}`)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                  className="group flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition-colors hover:bg-stone-50"
+                >
+                  <span
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      complete
+                        ? 'bg-salvia-500 text-white'
+                        : pending
+                          ? 'bg-rosa-50 text-rosa-600 ring-1 ring-rosa-200 ring-inset'
+                          : 'bg-stone-100 text-stone-500'
+                    }`}
+                  >
+                    {complete ? <Check className="size-3.5" strokeWidth={3} aria-hidden /> : sec.n}
+                  </span>
+                  <span
+                    className={`min-w-0 flex-1 leading-snug ${complete ? 'text-stone-500' : 'font-medium text-stone-800'}`}
+                  >
+                    {sec.title}
+                  </span>
+                  {pending > 0 && <span className="num text-xs font-semibold text-rosa-600">{pending}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </aside>
+  );
 }

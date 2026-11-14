@@ -4,7 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 /** Pestañas grandes para moverse dentro de un sector. */
 export function SectionTabs({ tabs }: { tabs: { to: string; label: string; icon: LucideIcon; end?: boolean }[] }) {
   return (
-    <nav aria-label="Secciones" className="mb-5 flex gap-1 overflow-x-auto rounded-2xl bg-stone-200/60 p-1">
+    <nav aria-label="Secciones" className="mb-5 flex gap-1 overflow-x-auto rounded-2xl bg-stone-200/60 p-1 lg:hidden">
       {tabs.map(({ to, label, icon: Icon, end }) => (
         <NavLink
           key={to}

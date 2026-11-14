@@ -38,34 +38,37 @@ export function rangeForPreset(key: PresetKey, custom: DateRange = { from: null,
   }
 }
 
-/** Filtro de período con atajos grandes. */
+/** Filtro de período: atajos en una "pastilla" y fechas a elección. */
 export function DateRangeFilter({
   preset,
   custom,
   onPreset,
   onCustom,
+  children,
 }: {
   preset: PresetKey;
   custom: DateRange;
   onPreset: (key: PresetKey) => void;
   onCustom: (range: DateRange) => void;
+  /** Filtros extra que van en la misma barra (a la derecha). */
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-stone-200/80 sm:p-4">
-      <p className="mb-2 font-bold text-stone-800" id="periodo-label">
+    <div className="card flex flex-wrap items-center gap-x-4 gap-y-3 p-2.5 pl-4">
+      <span className="text-sm font-semibold text-stone-500" id="periodo-label">
         Período
-      </p>
-      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="periodo-label">
+      </span>
+      <div className="flex flex-wrap gap-1" role="group" aria-labelledby="periodo-label">
         {PRESETS.map((p) => (
           <button
             key={p.key}
             type="button"
             aria-pressed={preset === p.key}
             onClick={() => onPreset(p.key)}
-            className={`min-h-10 rounded-full border-2 px-3.5 py-1 font-bold transition-colors ${
+            className={`h-9 rounded-lg px-3 text-sm font-semibold transition-all duration-150 ${
               preset === p.key
-                ? 'border-rosa-600 bg-rosa-600 text-white'
-                : 'border-stone-200 bg-white text-stone-700 hover:border-rosa-300'
+                ? 'bg-rosa-600 text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]'
+                : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
             }`}
           >
             {p.label}
@@ -73,21 +76,24 @@ export function DateRangeFilter({
         ))}
       </div>
       {preset === 'custom' && (
-        <div className="mt-3 grid gap-3 sm:max-w-md sm:grid-cols-2">
+        <div className="flex items-end gap-2">
           <TextField
             label="Desde"
             type="date"
             value={custom.from ?? ''}
             onValueChange={(v) => onCustom({ ...custom, from: v || null })}
+            className="h-9"
           />
           <TextField
             label="Hasta"
             type="date"
             value={custom.to ?? ''}
             onValueChange={(v) => onCustom({ ...custom, to: v || null })}
+            className="h-9"
           />
         </div>
       )}
+      {children && <div className="ml-auto flex flex-wrap items-end gap-3">{children}</div>}
     </div>
   );
 }
