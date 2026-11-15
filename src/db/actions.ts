@@ -8,6 +8,9 @@ import type {
   ClientField,
   Photo,
   Selections,
+  MoneyConcept,
+  MoneyKind,
+  MoneyMovement,
   Session,
   SessionSelection,
 } from './types';
@@ -113,12 +116,14 @@ export async function countItemUsage(itemId: number, catalogId: number): Promise
     // Los tipos de piel se usan en las fichas.
     count += await db.clients.filter((c) => c.skinTypeId === itemId).count();
   }
+  // Los productos también pueden estar en compras y ventas (Economía).
+  count += await db.movements.filter((m) => m.productId === itemId).count();
   return count;
 }
 
 /** Elimina un ítem y lo saca de las sesiones/fichas donde se usó. */
 export async function deleteItem(id: number) {
-  await db.transaction('rw', db.catalogItems, db.sessions, db.clients, async () => {
+  await db.transaction('rw', [db.catalogItems, db.sessions, db.clients, db.movements], async () => {
     const item = await db.catalogItems.get(id);
     if (!item) return;
     const key = String(item.catalogId);
@@ -131,6 +136,13 @@ export async function deleteItem(id: number) {
     });
     await db.clients.toCollection().modify((c) => {
       if (c.skinTypeId === id) c.skinTypeId = null;
+    });
+    // Las compras/ventas se conservan, solo dejan de estar asociadas al producto.
+    await db.movements.toCollection().modify((m) => {
+      if (m.productId === id) {
+        m.productId = null;
+        m.quantity = null;
+      }
     });
     await db.catalogItems.delete(id);
   });
@@ -187,7 +199,11 @@ export async function updateClient(id: number, input: ClientInput) {
 
 /** Elimina la clienta con todas sus sesiones y fotos. */
 export async function deleteClient(id: number) {
-  await db.transaction('rw', db.clients, db.sessions, db.photos, async () => {
+  await db.transaction('rw', [db.clients, db.sessions, db.photos, db.movements], async () => {
+    // Las ventas a esta clienta se conservan en Economía, sin el nombre.
+    await db.movements.toCollection().modify((m) => {
+      if (m.clientId === id) m.clientId = null;
+    });
     await db.photos.where('clientId').equals(id).delete();
     await db.sessions.where('clientId').equals(id).delete();
     await db.clients.delete(id);
@@ -318,9 +334,21 @@ export async function deleteSession(id: number) {
 export async function deleteAllData() {
   await db.transaction(
     'rw',
-    [db.catalogs, db.catalogItems, db.clients, db.clientFields, db.sessions, db.photos, db.settings],
+    [
+      db.catalogs,
+      db.catalogItems,
+      db.clients,
+      db.clientFields,
+      db.sessions,
+      db.photos,
+      db.settings,
+      db.moneyConcepts,
+      db.movements,
+    ],
     async () => {
       await Promise.all([
+        db.moneyConcepts.clear(),
+        db.movements.clear(),
         db.catalogs.clear(),
         db.catalogItems.clear(),
         db.clients.clear(),
@@ -332,4 +360,57 @@ export async function deleteAllData() {
     },
   );
   await ensureDefaults();
+}
+
+/* -------------------------------- Economía -------------------------------- */
+
+export type MovementInput = Omit<MoneyMovement, 'id' | 'createdAt' | 'updatedAt' | 'sample'>;
+
+export async function saveMovement(id: number | null, input: MovementInput): Promise<number> {
+  const now = nowISO();
+  const data: MovementInput = {
+    ...input,
+    description: input.description.trim(),
+    // Producto y cantidad solo tienen sentido en ingresos y gastos (no en inversiones).
+    productId: input.kind === 'inversion' ? null : input.productId,
+    quantity: input.kind === 'inversion' || input.productId === null ? null : input.quantity,
+    clientId: input.kind === 'ingreso' ? input.clientId : null,
+  };
+  if (id) {
+    await db.movements.update(id, { ...data, updatedAt: now });
+    return id;
+  }
+  return db.movements.add({ ...data, createdAt: now, updatedAt: now });
+}
+
+export async function deleteMovement(id: number) {
+  await db.movements.delete(id);
+}
+
+export async function createConcept(kind: MoneyKind, name: string): Promise<number> {
+  const clean = name.trim();
+  if (!clean) throw new Error('Escribí el nombre del concepto.');
+  const all = await db.moneyConcepts.toArray();
+  const existing = all.find((c) => c.kind === kind && normalize(c.name) === normalize(clean));
+  if (existing) {
+    if (!existing.active) await db.moneyConcepts.update(existing.id!, { active: true });
+    return existing.id!;
+  }
+  const order = all.reduce((m, c) => Math.max(m, c.order), 0) + 1;
+  return db.moneyConcepts.add({ kind, name: clean, active: true, order, createdAt: nowISO() });
+}
+
+export async function updateConcept(id: number, changes: Partial<Pick<MoneyConcept, 'name' | 'active'>>) {
+  await db.moneyConcepts.update(id, changes.name !== undefined ? { ...changes, name: changes.name.trim() } : changes);
+}
+
+export async function countConceptUsage(id: number): Promise<number> {
+  return db.movements.where('conceptId').equals(id).count();
+}
+
+/** Solo se puede eliminar un concepto sin movimientos (si no, se desactiva). */
+export async function deleteConcept(id: number) {
+  if ((await countConceptUsage(id)) > 0)
+    throw new Error('Este concepto tiene movimientos: desactivalo en lugar de eliminarlo.');
+  await db.moneyConcepts.delete(id);
 }

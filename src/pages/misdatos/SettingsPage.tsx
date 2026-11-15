@@ -91,7 +91,7 @@ export function SettingsPage() {
   const clearSample = async () => {
     const ok = await confirm({
       title: '¿Borrar los datos de ejemplo?',
-      message: 'Se borran las clientas y sesiones de ejemplo. Lo que cargaste vos no se toca.',
+      message: 'Se borran las clientas, sesiones y movimientos de ejemplo. Lo que cargaste vos no se toca.',
       confirmLabel: 'Borrar ejemplos',
       danger: true,
     });
@@ -326,6 +326,9 @@ export function SettingsPage() {
             <ul className="list-inside list-disc">
               <li>{plural(pending.summary.clients, 'clienta', 'clientas')}</li>
               <li>{plural(pending.summary.sessions, 'sesión', 'sesiones')}</li>
+              {pending.summary.movements > 0 && (
+                <li>{plural(pending.summary.movements, 'movimiento de economía', 'movimientos de economía')}</li>
+              )}
               <li>{pending.summary.includesPhotos ? plural(pending.summary.photos, 'foto', 'fotos') : 'sin fotos'}</li>
             </ul>
             <p className="rounded-xl bg-amber-50 p-3 text-amber-900">

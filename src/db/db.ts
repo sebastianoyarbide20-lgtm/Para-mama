@@ -1,5 +1,15 @@
 import Dexie, { type Table } from 'dexie';
-import type { Catalog, CatalogItem, Client, ClientField, Photo, Session, SettingRow } from './types';
+import type {
+  Catalog,
+  CatalogItem,
+  Client,
+  ClientField,
+  MoneyConcept,
+  MoneyMovement,
+  Photo,
+  Session,
+  SettingRow,
+} from './types';
 import { normalizeClient } from '../lib/anamnesis';
 import { normalizeCatalog, normalizeSession } from '../lib/finance';
 
@@ -15,6 +25,8 @@ export class CabinaDB extends Dexie {
   sessions!: Table<Session, number>;
   photos!: Table<Photo, number>;
   settings!: Table<SettingRow, string>;
+  moneyConcepts!: Table<MoneyConcept, number>;
+  movements!: Table<MoneyMovement, number>;
 
   constructor() {
     super('mi-cabina');
@@ -57,6 +69,11 @@ export class CabinaDB extends Dexie {
             Object.assign(s, normalizeSession(s));
           });
       });
+    // v4: economía (ingresos que no son de sesiones, gastos e inversiones).
+    this.version(4).stores({
+      moneyConcepts: '++id, kind, order',
+      movements: '++id, date, kind, conceptId',
+    });
   }
 }
 
@@ -70,6 +87,8 @@ export const ALL_TABLES = [
   'sessions',
   'photos',
   'settings',
+  'moneyConcepts',
+  'movements',
 ] as const;
 
 export type TableName = (typeof ALL_TABLES)[number];

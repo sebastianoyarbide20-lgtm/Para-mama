@@ -137,6 +137,15 @@ export function monthLabel(iso: string): string {
   return `${MONTHS_SHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
 }
 
+const monthLongFormatter = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' });
+
+/** "Noviembre de 2026" */
+export function monthLongLabel(iso: string): string {
+  if (!isValidISODate(iso)) return '';
+  const text = monthLongFormatter.format(parseISODate(iso));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** "03/11" */
 export function shortDayLabel(iso: string): string {
   const d = parseISODate(iso);

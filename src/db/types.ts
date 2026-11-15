@@ -166,6 +166,41 @@ export interface SettingRow {
   value: unknown;
 }
 
+/* ------------------------------ Economía ------------------------------ */
+
+/** Tipo de movimiento de dinero cargado a mano (los ingresos de las sesiones se toman solos). */
+export type MoneyKind = 'ingreso' | 'gasto' | 'inversion';
+
+/** Concepto para clasificar ingresos, gastos o inversiones (la usuaria puede agregar los suyos). */
+export interface MoneyConcept {
+  id?: number;
+  kind: MoneyKind;
+  name: string;
+  active: boolean;
+  order: number;
+  createdAt: string;
+  sample?: boolean;
+}
+
+/** Ingreso que no vino de una sesión (ej: venta de cremas) o egreso (gasto o inversión). */
+export interface MoneyMovement {
+  id?: number;
+  kind: MoneyKind;
+  /** yyyy-mm-dd */
+  date: string;
+  conceptId: number;
+  amount: number;
+  description: string;
+  /** Producto vendido o comprado (de la lista «Líquidos y productos»), opcional. */
+  productId: number | null;
+  quantity: number | null;
+  /** Clienta (para ventas), opcional. */
+  clientId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  sample?: boolean;
+}
+
 export interface AppSettings {
   businessName: string;
   inactiveDays: number;

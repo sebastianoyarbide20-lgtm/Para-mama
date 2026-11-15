@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, addMonths, ageFromBirthDate, daysBetween, formatDate, relativeDays, startOfWeek } from './dates';
+import {
+  addDays,
+  addMonths,
+  ageFromBirthDate,
+  daysBetween,
+  formatDate,
+  monthLongLabel,
+  relativeDays,
+  startOfWeek,
+} from './dates';
 import { parseMoneyInput } from './format';
 import { toCSV } from './csv';
 import { matches, normalize } from './text';
@@ -33,6 +42,11 @@ function session(partial: Partial<Session> & Pick<Session, 'clientId' | 'date'>)
 }
 
 describe('fechas', () => {
+  it('nombre del mes completo', () => {
+    expect(monthLongLabel('2026-11-01')).toBe('Noviembre de 2026');
+    expect(monthLongLabel('')).toBe('');
+  });
+
   it('formatea en dd/mm/aaaa', () => {
     expect(formatDate('2026-11-06')).toBe('06/11/2026');
     expect(formatDate('')).toBe('');

@@ -1,5 +1,5 @@
 import { db, nowISO } from './db';
-import { BUILTIN_KEYS, type Catalog } from './types';
+import { BUILTIN_KEYS, type Catalog, type MoneyKind } from './types';
 
 interface DefaultCatalog {
   catalog: Omit<Catalog, 'id' | 'createdAt'>;
@@ -120,6 +120,28 @@ export async function ensureDefaults(): Promise<void> {
       const createdAt = nowISO();
       const catalogId = await db.catalogs.add({ ...def.catalog, createdAt });
       await db.catalogItems.bulkAdd(def.items.map((name) => ({ catalogId, name, active: true, createdAt })));
+    }
+  });
+  await ensureMoneyConcepts();
+}
+
+/** Conceptos de economía que vienen con la app (se pueden renombrar, desactivar y agregar otros). */
+export const DEFAULT_CONCEPTS: Record<MoneyKind, string[]> = {
+  ingreso: ['Venta de cremas y productos', 'Sesión no registrada', 'Otros ingresos'],
+  gasto: ['Compra de productos e insumos', 'Alquiler', 'Servicios (luz, agua, internet)', 'Publicidad', 'Otros gastos'],
+  inversion: ['Aparatología', 'Muebles y equipamiento', 'Cursos y capacitación', 'Otras inversiones'],
+};
+
+/** Crea los conceptos de economía la primera vez (o si se borraron todos). */
+export async function ensureMoneyConcepts(): Promise<void> {
+  await db.transaction('rw', db.moneyConcepts, async () => {
+    if ((await db.moneyConcepts.count()) > 0) return;
+    const createdAt = nowISO();
+    let order = 1;
+    for (const kind of Object.keys(DEFAULT_CONCEPTS) as MoneyKind[]) {
+      for (const name of DEFAULT_CONCEPTS[kind]) {
+        await db.moneyConcepts.add({ kind, name, active: true, order: order++, createdAt });
+      }
     }
   });
 }

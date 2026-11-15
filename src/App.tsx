@@ -67,6 +67,18 @@ const router = createHashRouter([
         path: 'panel/ingresos',
         lazy: async () => ({ Component: (await import('./pages/panel/IncomePage')).IncomePage }),
       },
+      {
+        path: 'economia',
+        lazy: async () => ({ Component: (await import('./pages/economia/EconomyPage')).EconomyPage }),
+      },
+      {
+        path: 'economia/movimientos',
+        lazy: async () => ({ Component: (await import('./pages/economia/MovementsPage')).MovementsPage }),
+      },
+      {
+        path: 'economia/productos',
+        lazy: async () => ({ Component: (await import('./pages/economia/ProductsPage')).ProductsPage }),
+      },
       { path: 'clientas', element: <ClientsListPage /> },
       { path: 'clientas/nueva', element: <ClientEditPage /> },
       { path: 'clientas/:id', element: <ClientDetailPage /> },

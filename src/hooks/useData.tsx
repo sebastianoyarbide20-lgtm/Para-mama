@@ -9,6 +9,8 @@ import {
   type CatalogItem,
   type Client,
   type ClientField,
+  type MoneyConcept,
+  type MoneyMovement,
   type Session,
 } from '../db/types';
 import { computeClientStats, type ClientStat } from '../lib/stats';
@@ -29,6 +31,11 @@ export interface AppData {
   sessions: Session[];
   clientStats: Map<number, ClientStat>;
   settings: AppSettings;
+  /** Conceptos de economía (ingresos, gastos e inversiones), en orden. */
+  concepts: MoneyConcept[];
+  conceptsById: Map<number, MoneyConcept>;
+  /** Movimientos cargados a mano en Economía. */
+  movements: MoneyMovement[];
 }
 
 const DataContext = createContext<AppData | null>(null);
@@ -40,9 +47,12 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
   const clientFields = useLiveQuery(() => db.clientFields.orderBy('order').toArray(), []);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
   const settingRows = useLiveQuery(() => db.settings.toArray(), []);
+  const concepts = useLiveQuery(() => db.moneyConcepts.orderBy('order').toArray(), []);
+  const movements = useLiveQuery(() => db.movements.toArray(), []);
 
   const value = useMemo<AppData | null>(() => {
-    if (!catalogs || !items || !clients || !clientFields || !sessions || !settingRows) return null;
+    if (!catalogs || !items || !clients || !clientFields || !sessions || !settingRows || !concepts || !movements)
+      return null;
     const catalogsById = new Map(catalogs.map((c) => [c.id!, c]));
     const itemsById = new Map(items.map((i) => [i.id!, i]));
     const itemsByCatalog = new Map<number, CatalogItem[]>();
@@ -69,8 +79,11 @@ export function DataProvider({ children, fallback }: { children: ReactNode; fall
       sessions,
       clientStats: computeClientStats(sessions),
       settings,
+      concepts,
+      conceptsById: new Map(concepts.map((c) => [c.id!, c])),
+      movements,
     };
-  }, [catalogs, items, clients, clientFields, sessions, settingRows]);
+  }, [catalogs, items, clients, clientFields, sessions, settingRows, concepts, movements]);
 
   if (!value) return <>{fallback}</>;
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

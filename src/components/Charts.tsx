@@ -315,7 +315,7 @@ export function BarList({
   rows: BarListRow[];
   format?: (v: number) => string;
   onSelect?: (row: BarListRow) => void;
-  tone?: 'rosa' | 'salvia';
+  tone?: 'rosa' | 'salvia' | 'sky';
 }) {
   const [grown, setGrown] = useState(prefersReducedMotion());
   useEffect(() => {
@@ -323,8 +323,11 @@ export function BarList({
     return () => cancelAnimationFrame(f);
   }, []);
   const max = Math.max(...rows.map((r) => r.value), 1);
-  const bar =
-    tone === 'rosa' ? 'bg-linear-to-r from-rosa-100 to-rosa-200/80' : 'bg-linear-to-r from-salvia-100 to-salvia-200/80';
+  const bar = {
+    rosa: 'bg-linear-to-r from-rosa-100 to-rosa-200/80',
+    salvia: 'bg-linear-to-r from-salvia-100 to-salvia-200/80',
+    sky: 'bg-linear-to-r from-sky-100 to-sky-200/80',
+  }[tone];
   return (
     <ul className="space-y-1.5">
       {rows.map((r) => {

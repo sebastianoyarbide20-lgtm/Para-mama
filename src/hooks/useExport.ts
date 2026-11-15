@@ -1,5 +1,13 @@
 import { useCallback } from 'react';
-import { backupFileName, buildBackup, chargesCSV, clientsCSV, markBackupDone, sessionsCSV } from '../db/backup';
+import {
+  backupFileName,
+  buildBackup,
+  chargesCSV,
+  clientsCSV,
+  markBackupDone,
+  movementsCSV,
+  sessionsCSV,
+} from '../db/backup';
 import { downloadFile } from '../lib/csv';
 import { todayISO } from '../lib/dates';
 import { useToast } from '../components/ui/Feedback';
@@ -89,5 +97,20 @@ export function useExport() {
     }
   }, [toast]);
 
-  return { exportBackup, exportSessions, exportClients, exportCharges };
+  const exportMovements = useCallback(
+    async (from: string | null = null, to: string | null = null) => {
+      try {
+        const csv = await movementsCSV(from, to);
+        const suffix = from || to ? (from ?? 'inicio') + '_a_' + (to ?? todayISO()) : todayISO();
+        downloadFile('movimientos-' + suffix + '.csv', csv, 'text/csv;charset=utf-8');
+        toast.success('Planilla de movimientos descargada (se abre con Excel).');
+      } catch (e) {
+        console.error(e);
+        toast.error('No se pudo exportar.');
+      }
+    },
+    [toast],
+  );
+
+  return { exportBackup, exportSessions, exportClients, exportCharges, exportMovements };
 }

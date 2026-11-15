@@ -6,6 +6,7 @@ import {
   DatabaseBackup,
   FolderHeart,
   House,
+  PiggyBank,
   Plus,
   ShieldCheck,
   type LucideIcon,
@@ -60,6 +61,18 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
+    to: '/economia',
+    label: 'Economía',
+    shortLabel: 'Economía',
+    icon: PiggyBank,
+    match: (p) => p.startsWith('/economia'),
+    children: [
+      { to: '/economia', label: 'Resumen', match: (p) => p === '/economia' },
+      { to: '/economia/movimientos', label: 'Movimientos', match: (p) => p === '/economia/movimientos' },
+      { to: '/economia/productos', label: 'Productos', match: (p) => p === '/economia/productos' },
+    ],
+  },
+  {
     to: '/mis-datos',
     label: 'Mis datos',
     shortLabel: 'Mis datos',
@@ -85,6 +98,9 @@ function breadcrumb(path: string): string[] {
   if (path === '/clientas/nueva') return ['Panel', 'Clientas', 'Nueva clienta'];
   if (/^\/clientas\/\d+\/editar$/.test(path)) return ['Panel', 'Clientas', 'Ficha inicial'];
   if (/^\/clientas\/\d+$/.test(path)) return ['Panel', 'Clientas', 'Ficha de la clienta'];
+  if (path === '/economia') return ['Economía', 'Resumen'];
+  if (path === '/economia/movimientos') return ['Economía', 'Movimientos'];
+  if (path === '/economia/productos') return ['Economía', 'Productos'];
   if (path === '/mis-datos') return ['Mis datos', 'Mis listas'];
   if (path.startsWith('/mis-datos/lista')) return ['Mis datos', 'Lista'];
   if (path === '/mis-datos/ficha') return ['Mis datos', 'Campos de la ficha'];
@@ -288,7 +304,7 @@ export function Layout() {
         aria-label="Principal"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        <ul className="mx-auto grid max-w-lg grid-cols-4">
+        <ul className="mx-auto grid max-w-lg grid-cols-5">
           {NAV_ITEMS.map((item) => {
             const active = item.match(pathname);
             const Icon = item.icon;

@@ -10,6 +10,7 @@ import {
   DatabaseBackup,
   FlaskConical,
   FolderHeart,
+  PiggyBank,
   Search,
   Sparkles,
   Sun,
@@ -373,7 +374,7 @@ export function HomePage() {
         <h2 id="sectores" className="mb-3 font-display text-xl font-semibold text-stone-900">
           ¿Adónde querés ir?
         </h2>
-        <Stagger className="grid gap-4 md:grid-cols-3">
+        <Stagger className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <SectorCard
             to="/sesion/nueva"
             icon={<CalendarPlus />}
@@ -387,6 +388,13 @@ export function HomePage() {
             tone="violet"
             title="Panel y clientas"
             text="Historial de cada clienta, ingresos, gráficos y quiénes hace mucho no vienen."
+          />
+          <SectorCard
+            to="/economia"
+            icon={<PiggyBank />}
+            tone="sky"
+            title="Economía"
+            text="Lo que entró, lo que salió y lo que te quedó. Ventas de cremas, gastos e inversiones."
           />
           <SectorCard
             to="/mis-datos"

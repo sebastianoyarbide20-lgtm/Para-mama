@@ -1,7 +1,17 @@
 import { db, nowISO, ALL_TABLES } from './db';
 import { ensureDefaults } from './defaults';
 import { saveSetting } from './actions';
-import type { Catalog, CatalogItem, Client, ClientField, Photo, Session, SettingRow } from './types';
+import type {
+  Catalog,
+  CatalogItem,
+  Client,
+  ClientField,
+  MoneyConcept,
+  MoneyMovement,
+  Photo,
+  Session,
+  SettingRow,
+} from './types';
 import { BUILTIN_KEYS } from './types';
 import { toCSV, type CSVCell } from '../lib/csv';
 import { formatDate, todayISO } from '../lib/dates';
@@ -22,8 +32,11 @@ import {
 } from '../lib/anamnesis';
 
 export const BACKUP_APP_ID = 'mi-cabina';
-/** v2: ficha inicial (anamnesis). v3: monto por opción en cada sesión. Las copias viejas se adaptan al restaurar. */
-export const BACKUP_VERSION = 3;
+/**
+ * v2: ficha inicial (anamnesis). v3: monto por opción en cada sesión. v4: economía (movimientos y conceptos).
+ * Las copias viejas se adaptan al restaurar.
+ */
+export const BACKUP_VERSION = 4;
 
 export interface BackupData {
   catalogs: Catalog[];
@@ -33,6 +46,8 @@ export interface BackupData {
   sessions: Session[];
   photos: Photo[];
   settings: SettingRow[];
+  moneyConcepts: MoneyConcept[];
+  movements: MoneyMovement[];
 }
 
 export interface BackupFile {
@@ -44,15 +59,18 @@ export interface BackupFile {
 }
 
 export async function buildBackup(includePhotos: boolean): Promise<BackupFile> {
-  const [catalogs, catalogItems, clients, clientFields, sessions, photos, settings] = await Promise.all([
-    db.catalogs.toArray(),
-    db.catalogItems.toArray(),
-    db.clients.toArray(),
-    db.clientFields.toArray(),
-    db.sessions.toArray(),
-    includePhotos ? db.photos.toArray() : Promise.resolve([] as Photo[]),
-    db.settings.toArray(),
-  ]);
+  const [catalogs, catalogItems, clients, clientFields, sessions, photos, settings, moneyConcepts, movements] =
+    await Promise.all([
+      db.catalogs.toArray(),
+      db.catalogItems.toArray(),
+      db.clients.toArray(),
+      db.clientFields.toArray(),
+      db.sessions.toArray(),
+      includePhotos ? db.photos.toArray() : Promise.resolve([] as Photo[]),
+      db.settings.toArray(),
+      db.moneyConcepts.toArray(),
+      db.movements.toArray(),
+    ]);
   return {
     app: BACKUP_APP_ID,
     version: BACKUP_VERSION,
@@ -66,6 +84,8 @@ export async function buildBackup(includePhotos: boolean): Promise<BackupFile> {
       sessions,
       photos,
       settings: settings.filter((s) => s.key !== 'lastBackupAt'),
+      moneyConcepts,
+      movements,
     },
   };
 }
@@ -85,6 +105,8 @@ export interface BackupSummary {
   sessions: number;
   photos: number;
   catalogs: number;
+  /** Ingresos, gastos e inversiones cargados en Economía. */
+  movements: number;
   exportedAt: string;
   includesPhotos: boolean;
 }
@@ -117,6 +139,8 @@ export function parseBackup(text: string): { backup: BackupFile; summary: Backup
     sessions: d.sessions ?? [],
     photos: Array.isArray(d.photos) ? d.photos : [],
     settings: Array.isArray(d.settings) ? d.settings : [],
+    moneyConcepts: Array.isArray(d.moneyConcepts) ? d.moneyConcepts : [],
+    movements: Array.isArray(d.movements) ? d.movements : [],
   };
   const backup: BackupFile = {
     app: BACKUP_APP_ID,
@@ -132,6 +156,7 @@ export function parseBackup(text: string): { backup: BackupFile; summary: Backup
       sessions: data.sessions.length,
       photos: data.photos.length,
       catalogs: data.catalogs.length,
+      movements: data.movements.length,
       exportedAt: backup.exportedAt,
       includesPhotos: backup.includesPhotos,
     },
@@ -155,6 +180,8 @@ export async function restoreBackup(backup: BackupFile, options: { keepCurrentPh
     await db.sessions.bulkAdd(d.sessions.map((x) => normalizeSession(x as unknown as Record<string, unknown>)));
     if (!keepPhotos) await db.photos.bulkAdd(d.photos);
     await db.settings.bulkPut(d.settings);
+    await db.moneyConcepts.bulkAdd(d.moneyConcepts);
+    await db.movements.bulkAdd(d.movements);
   });
   await ensureDefaults();
 }
@@ -317,6 +344,37 @@ export async function chargesCSV(from: string | null = null, to: string | null =
       note ? `${l.name}: ${note}` : l.name,
       l.amount,
       l.paid,
+    ]);
+  }
+  return toCSV(rows);
+}
+
+/** Movimientos de economía cargados a mano (ingresos que no son de sesiones, gastos e inversiones). */
+export async function movementsCSV(from: string | null = null, to: string | null = null): Promise<string> {
+  const [movements, concepts, items, clients] = await Promise.all([
+    db.movements.toArray(),
+    db.moneyConcepts.toArray(),
+    db.catalogItems.toArray(),
+    db.clients.toArray(),
+  ]);
+  const conceptsById = new Map(concepts.map((c) => [c.id!, c]));
+  const itemsById = new Map(items.map((i) => [i.id!, i]));
+  const clientsById = new Map(clients.map((c) => [c.id!, c]));
+  const kinds: Record<string, string> = { ingreso: 'Ingreso', gasto: 'Gasto', inversion: 'Inversión' };
+  const rows: CSVCell[][] = [['Fecha', 'Tipo', 'Concepto', 'Detalle', 'Producto', 'Cantidad', 'Clienta', 'Monto']];
+  for (const m of movements
+    .filter((x) => (!from || x.date >= from) && (!to || x.date <= to))
+    .sort((a, b) => b.date.localeCompare(a.date))) {
+    const client = m.clientId ? clientsById.get(m.clientId) : undefined;
+    rows.push([
+      formatDate(m.date),
+      kinds[m.kind] ?? m.kind,
+      conceptsById.get(m.conceptId)?.name ?? 'Concepto eliminado',
+      m.description,
+      m.productId ? (itemsById.get(m.productId)?.name ?? '') : '',
+      m.quantity ?? '',
+      client ? `${client.firstName} ${client.lastName}`.trim() : '',
+      m.kind === 'ingreso' ? m.amount : -m.amount,
     ]);
   }
   return toCSV(rows);

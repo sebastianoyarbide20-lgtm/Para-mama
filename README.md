@@ -65,7 +65,7 @@ pasaron más de 14 días desde la última).
 En **Mis datos → Copia de seguridad y ajustes**:
 
 - **Descargar copia completa**: baja un archivo `.json` con todo (clientas, sesiones, listas, campos de la ficha,
-  ajustes y fotos). Guardalo en Google Drive, mandatelo por mail o copialo a un pendrive.
+  economía, ajustes y fotos). Guardalo en Google Drive, mandatelo por mail o copialo a un pendrive.
 - **Enviar copia (WhatsApp, Drive, mail…)**: en el celular abre el menú de compartir del teléfono.
 - **Copia sin fotos**: más liviana, para cuando hay muchas fotos.
 - **Restaurar una copia**: elegís el archivo `.json`, la app muestra qué contiene (cuántas clientas, sesiones y fotos) y
@@ -148,7 +148,27 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
   tratamiento más frecuente, productos más usados con ella, total cobrado) y la **línea de tiempo** con todas sus
   sesiones y fotos. Desde ahí: **Registrar sesión** (ya con la clienta elegida) y **Editar ficha**.
 
-### 3. Mis datos — tus listas
+### 3. Economía — lo que entra, lo que sale y lo que queda
+
+- **Resumen**: elegís el período y ves tres números grandes: **Entró** (lo cobrado en las sesiones + otros ingresos),
+  **Salió** (gastos + inversiones) y **Te quedó** (con una frase simple: «de cada $100 que entraron, te quedaron $X»).
+  Debajo: lo que quedó **sin contar inversiones**, lo que falta cobrar y el promedio por mes (o por semana). Un gráfico
+  de barras compara lo que entró y salió en cada mes, «¿En qué se fue la plata?» y «¿De dónde entró?» muestran los
+  totales por concepto, y la tabla **Acumulado mes a mes** suma lo que fue quedando, con el total del período.
+- **Agregar ingreso / Agregar gasto o inversión**: una ventana con tres opciones grandes (**Ingreso**, **Gasto**,
+  **Inversión**), el concepto, el monto y la fecha (hoy por defecto). Opcional: el producto vendido o comprado (con la
+  cantidad), la clienta (en ventas) y un detalle.
+  - Conceptos que vienen: ingresos (venta de cremas y productos, sesión no registrada, otros), gastos (compra de
+    productos e insumos, alquiler, servicios, publicidad, otros) e inversiones (aparatología, muebles y equipamiento,
+    cursos y capacitación, otras). Con **«Nuevo concepto»** se agregan otros al momento, y en **Movimientos →
+    Conceptos** se renombran, se ocultan o se eliminan (solo si no tienen movimientos).
+- **Movimientos**: todo lo cargado a mano, agrupado por mes, con filtros por período, tipo, concepto y búsqueda. Tocando
+  uno se cambia o se borra. «Exportar (CSV)» lo baja para Excel.
+- **Productos**: la misma lista de «Líquidos y productos» de las sesiones, con lo **comprado** y lo **vendido** (monto y
+  unidades) y en cuántas sesiones se usó cada uno. Desde ahí se **agrega un producto** nuevo y se registra rápido una
+  venta («Vendí») o una compra («Compré»). También se puede crear un producto desde la ventana de carga.
+
+### 4. Mis datos — tus listas
 
 - **Listas para las sesiones**: Tratamientos, Aparatología y Líquidos/productos vienen con algunos ejemplos que podés
   editar, **desactivar** (dejan de aparecer para elegir pero se conserva el historial) o eliminar.
@@ -180,7 +200,7 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
     lib/         fechas, formato de montos, CSV, búsqueda, estadísticas (con tests)
     components/  UI reutilizable (botones, tarjetas, campos, modales, avisos) y piezas de la app
                  (selector de catálogo con "+ agregar", buscador de clientas, ficha, fotos, gráficos)
-    pages/       Inicio, sesión, panel, clientas y mis datos
+    pages/       Inicio, sesión, panel, clientas, economía y mis datos
   public/        ícono, manifest y service worker (modo sin conexión)
   ```
 
@@ -196,5 +216,9 @@ Cigarrillo, «Embarazo / lactancia» → Condiciones del paciente).
     recomendaciones, observaciones, próxima sesión, otros cobros, total (`price`, suma de los montos) y pagado. Las
     sesiones cargadas antes del monto por opción conservan su total como «otros cobros». La lógica de ingresos está en
     `src/lib/finance.ts`.
+  - `moneyConcepts`: conceptos de economía (tipo `ingreso`, `gasto` o `inversion`, nombre, activo).
+  - `movements`: ingresos que no vienen de sesiones, gastos e inversiones (fecha, concepto, monto, detalle y,
+    opcionales, producto + cantidad y clienta). Los ingresos de las sesiones no se copian acá: se calculan solos. Las
+    cuentas (resumen, acumulado por mes, totales por concepto y por producto) están en `src/lib/economy.ts`.
   - `photos`: fotos comprimidas de cada sesión (antes/después).
   - `settings`: preferencias.
