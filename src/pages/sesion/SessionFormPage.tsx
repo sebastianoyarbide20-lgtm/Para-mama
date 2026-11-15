@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { CalendarPlus, Check, CircleCheck, Clock, History, House, Plus, Save, Trash2, UserRound } from 'lucide-react';
+import { CalendarPlus, CircleCheck, Clock, History, House, Plus, Save, Trash2, UserRound } from 'lucide-react';
 import { db } from '../../db/db';
 import type { Selections, Session } from '../../db/types';
 import { deleteSession, saveSession, type SessionInput } from '../../db/actions';
@@ -9,7 +9,7 @@ import { addDays, formatDate, formatDateLong, nowTime, todayISO } from '../../li
 import { formatMoney, parseMoneyInput, plural } from '../../lib/format';
 import { countSelections } from '../../lib/stats';
 import { lastPriceForClient } from '../../lib/finance';
-import { Card, PageHeader, Spinner, EmptyState } from '../../components/ui/Card';
+import { Spinner, EmptyState } from '../../components/ui/Card';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { TextArea, TextField, Toggle } from '../../components/ui/Fields';
 import { useConfirm, useToast } from '../../components/ui/Feedback';
@@ -299,7 +299,7 @@ function SessionForm({
         cancelLabel: 'Completar montos',
       });
       if (!ok) {
-        document.getElementById('paso-tratamientos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('paso-3')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
     }
@@ -378,154 +378,150 @@ function SessionForm({
 
   return (
     <div ref={topRef} className="scroll-mt-20">
-      <PageHeader
-        eyebrow={editingId ? 'Sesiones' : 'Sesión de hoy'}
-        title={editingId ? 'Editar sesión' : 'Sesión de hoy'}
-        subtitle={
-          editingId
-            ? `Sesión de ${clientName(clientsById.get(form.clientId ?? -1))} del ${formatDate(original?.date)}`
-            : 'Registrá lo que hiciste en pocos pasos.'
-        }
-      />
+      {/* Encabezado mínimo: el resto de la pantalla es el panel para completar. */}
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 className="font-display text-[1.6rem] leading-tight font-semibold text-stone-900">
+          {editingId ? 'Editar sesión' : 'Sesión de hoy'}
+        </h1>
+        {editingId && (
+          <p className="text-sm text-stone-500">
+            {clientName(clientsById.get(form.clientId ?? -1))} · {formatDate(original?.date)}
+          </p>
+        )}
+      </div>
       {!editingId && <SectionTabs tabs={SESSION_TABS} />}
 
-      <StepsBar
-        steps={[
-          {
-            id: 'paso-clienta',
-            label: 'Clienta',
-            value: form.clientId ? clientsById.get(form.clientId)?.firstName : undefined,
-            done: !!form.clientId,
-          },
-          { id: 'paso-fecha', label: 'Fecha', value: form.date ? formatDate(form.date) : undefined, done: !!form.date },
-          {
-            id: 'paso-3',
-            label: 'Tratamientos',
-            value: selectedCount ? plural(selectedCount, 'opción', 'opciones') : undefined,
-            done: selectedCount > 0,
-          },
-          {
-            id: 'paso-notas',
-            label: 'Notas',
-            done: !!(form.homeRecommendations.trim() || form.observations.trim()),
-          },
-          {
-            id: 'paso-cobro',
-            label: 'Cobro',
-            value: total !== null ? formatMoney(total) : undefined,
-            done: total !== null && missingCharges.length === 0,
-          },
-          { id: 'paso-extras', label: 'Extras', done: !!(form.nextSessionDate || form.photos.length) },
-        ]}
-      />
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
-        <form
-          className="space-y-6"
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            void save('normal');
-          }}
-        >
-          <Card id="paso-clienta" title={<StepTitle n={1}>¿A quién atendiste?</StepTitle>} className="scroll-mt-40">
-            <ClientPicker
-              value={form.clientId}
-              onChange={(cid) => {
-                set('clientId', cid);
-                if (cid) setErrors((er) => ({ ...er, client: undefined }));
-              }}
-              error={errors.client}
-            />
-            {form.clientId && (
-              <details className="group mt-4 rounded-2xl bg-crema p-3 lg:hidden" open>
-                <summary className="cursor-pointer font-bold text-rosa-800">
-                  Ver datos importantes y última sesión
-                </summary>
-                <div className="mt-3">
-                  <ClientSummary clientId={form.clientId} excludeSessionId={editingId} onDuplicate={duplicateFrom} />
-                </div>
-              </details>
-            )}
-          </Card>
-
-          <Card id="paso-fecha" title={<StepTitle n={2}>¿Cuándo?</StepTitle>} className="scroll-mt-40">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <TextField
-                  label="Fecha"
-                  type="date"
-                  required
-                  value={form.date}
-                  max={addDays(todayISO(), 365)}
-                  onValueChange={(v) => {
-                    set('date', v);
-                    if (v) setErrors((er) => ({ ...er, date: undefined }));
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save('normal');
+        }}
+      >
+        <div className="grid items-start gap-4 min-[1400px]:grid-cols-[minmax(0,1fr)_21rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]">
+          {/* ---------- Columna principal ---------- */}
+          <div className="min-w-0 space-y-4">
+            {/* Clienta y cuándo */}
+            <div className="card grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+              <div id="paso-clienta" className="min-w-0 scroll-mt-24">
+                <PanelLabel>Clienta</PanelLabel>
+                <ClientPicker
+                  value={form.clientId}
+                  onChange={(cid) => {
+                    set('clientId', cid);
+                    if (cid) setErrors((er) => ({ ...er, client: undefined }));
                   }}
-                  error={errors.date}
+                  error={errors.client}
                 />
-                <div className="mt-2 flex gap-2">
-                  <QuickChip active={form.date === todayISO()} onClick={() => set('date', todayISO())}>
-                    Hoy
-                  </QuickChip>
-                  <QuickChip
-                    active={form.date === addDays(todayISO(), -1)}
-                    onClick={() => set('date', addDays(todayISO(), -1))}
-                  >
-                    Ayer
-                  </QuickChip>
-                </div>
+                {form.clientId && (
+                  <details className="group mt-3 rounded-2xl bg-crema p-3 min-[1400px]:hidden" open>
+                    <summary className="cursor-pointer font-bold text-rosa-800">
+                      Ver datos importantes y última sesión
+                    </summary>
+                    <aside aria-label="Ficha de la clienta" className="mt-3">
+                      <ClientSummary
+                        clientId={form.clientId}
+                        excludeSessionId={editingId}
+                        onDuplicate={duplicateFrom}
+                      />
+                    </aside>
+                  </details>
+                )}
               </div>
-              <div>
-                <TextField label="Hora" optional type="time" value={form.time} onValueChange={(v) => set('time', v)} />
-                <div className="mt-2 flex gap-2">
-                  <QuickChip onClick={() => set('time', nowTime())}>
-                    <Clock className="size-4" aria-hidden /> Ahora
-                  </QuickChip>
-                  {form.time && <QuickChip onClick={() => set('time', '')}>Sin hora</QuickChip>}
+
+              <div
+                id="paso-fecha"
+                className="grid scroll-mt-24 grid-cols-2 gap-3 md:w-[19rem] md:border-l md:border-stone-100 md:pl-4"
+              >
+                <div>
+                  <TextField
+                    label="Fecha"
+                    type="date"
+                    required
+                    value={form.date}
+                    max={addDays(todayISO(), 365)}
+                    onValueChange={(v) => {
+                      set('date', v);
+                      if (v) setErrors((er) => ({ ...er, date: undefined }));
+                    }}
+                    error={errors.date}
+                    className="h-10 px-2.5"
+                  />
+                  <div className="mt-1.5 flex gap-1.5">
+                    <QuickChip active={form.date === todayISO()} onClick={() => set('date', todayISO())}>
+                      Hoy
+                    </QuickChip>
+                    <QuickChip
+                      active={form.date === addDays(todayISO(), -1)}
+                      onClick={() => set('date', addDays(todayISO(), -1))}
+                    >
+                      Ayer
+                    </QuickChip>
+                  </div>
+                </div>
+                <div>
+                  <TextField
+                    label="Hora"
+                    optional
+                    type="time"
+                    value={form.time}
+                    onValueChange={(v) => set('time', v)}
+                    className="h-10 px-2.5"
+                  />
+                  <div className="mt-1.5 flex gap-1.5">
+                    <QuickChip onClick={() => set('time', nowTime())}>
+                      <Clock className="size-3.5" aria-hidden /> Ahora
+                    </QuickChip>
+                    {form.time && <QuickChip onClick={() => set('time', '')}>Sin hora</QuickChip>}
+                  </div>
                 </div>
               </div>
             </div>
-          </Card>
 
-          <section id="paso-3" aria-labelledby="paso-tratamientos" className="scroll-mt-40 space-y-4">
-            <h2 id="paso-tratamientos" className="px-1 text-[1.05rem] font-bold text-stone-900">
-              <StepTitle n={3}>¿Qué le hiciste?</StepTitle>
-            </h2>
-            {sessionCatalogs.map((catalog) => (
-              <CatalogPicker
-                key={catalog.id}
-                catalog={catalog}
-                items={itemsByCatalog.get(catalog.id!) ?? []}
-                usage={usage.get(catalog.id!)}
-                value={form.selections[String(catalog.id)] ?? []}
-                onChange={(v) => setForm((f) => ({ ...f, selections: { ...f.selections, [String(catalog.id)]: v } }))}
-                prices={Object.fromEntries(
-                  (form.selections[String(catalog.id)] ?? []).map((sel) => [
-                    sel.itemId,
-                    form.prices[priceKey(catalog.id!, sel.itemId)] ?? '',
-                  ]),
-                )}
-                onPriceChange={(itemId, text) =>
-                  setForm((f) => ({ ...f, prices: { ...f.prices, [priceKey(catalog.id!, itemId)]: text } }))
-                }
-                priceHint={(itemId) =>
-                  form.clientId ? lastPriceForClient(sessions, form.clientId, catalog.id!, itemId, editingId) : null
-                }
-                showMissingPrices={showMissingPrices}
-              />
-            ))}
-            <p className="px-1 text-sm text-stone-500">
-              ¿Te falta una lista (por ejemplo «Zonas tratadas»)? Creala en{' '}
-              <Link to="/mis-datos" className="font-bold text-rosa-700 underline underline-offset-2">
-                Mis datos
-              </Link>{' '}
-              y aparece acá automáticamente.
-            </p>
-          </section>
+            {/* Qué se hizo: todas las listas a la vista, en dos columnas */}
+            <section id="paso-3" aria-labelledby="paso-tratamientos" className="scroll-mt-24">
+              <h2 id="paso-tratamientos" className="sr-only">
+                ¿Qué le hiciste?
+              </h2>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {sessionCatalogs.map((catalog) => (
+                  <CatalogPicker
+                    key={catalog.id}
+                    compact
+                    catalog={catalog}
+                    items={itemsByCatalog.get(catalog.id!) ?? []}
+                    usage={usage.get(catalog.id!)}
+                    value={form.selections[String(catalog.id)] ?? []}
+                    onChange={(v) =>
+                      setForm((f) => ({ ...f, selections: { ...f.selections, [String(catalog.id)]: v } }))
+                    }
+                    prices={Object.fromEntries(
+                      (form.selections[String(catalog.id)] ?? []).map((sel) => [
+                        sel.itemId,
+                        form.prices[priceKey(catalog.id!, sel.itemId)] ?? '',
+                      ]),
+                    )}
+                    onPriceChange={(itemId, text) =>
+                      setForm((f) => ({ ...f, prices: { ...f.prices, [priceKey(catalog.id!, itemId)]: text } }))
+                    }
+                    priceHint={(itemId) =>
+                      form.clientId ? lastPriceForClient(sessions, form.clientId, catalog.id!, itemId, editingId) : null
+                    }
+                    showMissingPrices={showMissingPrices}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 px-1 text-xs text-stone-500">
+                ¿Te falta una lista (por ejemplo «Zonas tratadas»)? Creala en{' '}
+                <Link to="/mis-datos" className="font-bold text-rosa-700 underline underline-offset-2">
+                  Mis datos
+                </Link>{' '}
+                y aparece acá automáticamente.
+              </p>
+            </section>
 
-          <Card id="paso-notas" title={<StepTitle n={4}>Para la casa y notas</StepTitle>} className="scroll-mt-40">
-            <div className="space-y-4">
+            {/* Notas */}
+            <div id="paso-notas" className="card grid scroll-mt-24 gap-4 p-4 md:grid-cols-2">
               <TextArea
                 label="Recomendaciones para hacer en casa"
                 value={form.homeRecommendations}
@@ -537,110 +533,124 @@ function SessionForm({
                 label="Observaciones de la sesión"
                 value={form.observations}
                 onValueChange={(v) => set('observations', v)}
-                rows={5}
+                rows={3}
                 placeholder="Cómo reaccionó la piel, qué notaste, qué hacer la próxima vez…"
               />
             </div>
-          </Card>
+          </div>
 
-          <Card
-            id="paso-cobro"
-            title={<StepTitle n={5}>Cobro</StepTitle>}
-            subtitle="Se suma solo con lo que anotaste en cada opción."
-            className="scroll-mt-40"
-          >
-            {charges.length === 0 ? (
-              <p className="text-stone-600">
-                Cuando elijas tratamientos, aparatos o productos, acá vas a ver lo que cobraste por cada uno.
-              </p>
-            ) : (
-              <ul className="divide-y divide-stone-100 rounded-xl ring-1 ring-stone-200">
-                {charges.map((c) => (
-                  <li key={c.key} className="flex items-center justify-between gap-3 px-3 py-2">
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-stone-800">{c.name}</span>
-                      <span className="block text-sm text-stone-500">{c.catalogName}</span>
+          {/* ---------- Columna lateral: ficha, cobro y extras ---------- */}
+          <div className="grid min-w-0 items-start gap-4 md:grid-cols-2 min-[1400px]:grid-cols-1">
+            <aside aria-label="Ficha de la clienta" className="card hidden overflow-hidden min-[1400px]:block">
+              <div aria-hidden className="h-1 bg-linear-to-r from-rosa-400 via-rosa-300 to-salvia-300" />
+              <div className="max-h-[24rem] overflow-y-auto p-4">
+                {form.clientId ? (
+                  <ClientSummary clientId={form.clientId} excludeSessionId={editingId} onDuplicate={duplicateFrom} />
+                ) : (
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-rosa-50 text-rosa-500">
+                      <UserRound className="size-5" aria-hidden />
                     </span>
-                    <span
-                      className={`shrink-0 font-bold tabular-nums ${
-                        c.amount !== null ? 'text-stone-900' : c.text.trim() ? 'text-red-700' : 'text-amber-700'
-                      }`}
-                    >
-                      {c.amount !== null ? formatMoney(c.amount) : c.text.trim() ? 'Revisar' : 'Sin monto'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="mt-5 grid gap-4 sm:grid-cols-[12rem_1fr]">
-              <TextField
-                label="Otros cobros"
-                optional
-                inputMode="decimal"
-                value={form.extraText}
-                onValueChange={(v) => {
-                  set('extraText', v);
-                  if (errors.price) setErrors((er) => ({ ...er, price: undefined }));
-                }}
-                placeholder="Ej: 5000"
-                error={form.extraText.trim() && extraAmount === null ? 'Solo números' : null}
-              />
-              <TextField
-                label="¿Qué fue?"
-                optional
-                value={form.extraNote}
-                onValueChange={(v) => set('extraNote', v)}
-                placeholder="Ej: crema que se llevó, seña, recargo…"
-              />
-            </div>
-
-            {errors.price && (
-              <p role="alert" className="mt-3 font-semibold text-red-700">
-                {errors.price}
-              </p>
-            )}
-
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-crema p-4">
-              <div>
-                <p className="text-sm font-bold text-stone-500">Total de la sesión</p>
-                <p className="text-3xl font-extrabold text-stone-900 tabular-nums">
-                  {total !== null ? formatMoney(total) : '–'}
-                </p>
-                {missingCharges.length > 0 && (
-                  <p className="text-sm font-semibold text-amber-800">
-                    Falta el monto de {missingCharges.length} {missingCharges.length === 1 ? 'opción' : 'opciones'}
-                  </p>
+                    <p className="text-sm text-stone-500">
+                      Al elegir la clienta, acá ves sus <strong className="text-stone-700">alergias</strong>,{' '}
+                      <strong className="text-stone-700">medicación</strong>,{' '}
+                      <strong className="text-stone-700">tipo de piel</strong> y su{' '}
+                      <strong className="text-stone-700">última sesión</strong>.
+                    </p>
+                  </div>
                 )}
               </div>
-              {total !== null && (
-                <Toggle
-                  label={form.paid ? 'Pagado' : 'Falta pagar'}
-                  description="Tocá para cambiar"
-                  checked={form.paid}
-                  onChange={(v) => set('paid', v)}
-                />
-              )}
-            </div>
-          </Card>
+            </aside>
 
-          <Card
-            id="paso-extras"
-            title={<StepTitle n={6}>Extras</StepTitle>}
-            subtitle="Todo esto es opcional."
-            className="scroll-mt-40"
-          >
-            <div className="space-y-6">
+            <div id="paso-cobro" className="card scroll-mt-24 p-4">
+              <PanelLabel>Cobro</PanelLabel>
+              {charges.length === 0 ? (
+                <p className="text-sm text-stone-500">
+                  Al elegir tratamientos, aparatos o productos, acá se suma lo que anotaste en cada uno.
+                </p>
+              ) : (
+                <ul className="max-h-44 divide-y divide-stone-100 overflow-y-auto rounded-xl ring-1 ring-stone-200">
+                  {charges.map((c) => (
+                    <li key={c.key} className="flex items-center justify-between gap-3 px-3 py-1.5">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-stone-800">{c.name}</span>
+                        <span className="block text-xs text-stone-500">{c.catalogName}</span>
+                      </span>
+                      <span
+                        className={`shrink-0 text-sm font-bold tabular-nums ${
+                          c.amount !== null ? 'text-stone-900' : c.text.trim() ? 'text-red-700' : 'text-amber-700'
+                        }`}
+                      >
+                        {c.amount !== null ? formatMoney(c.amount) : c.text.trim() ? 'Revisar' : 'Sin monto'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mt-3 grid grid-cols-[8.5rem_minmax(0,1fr)] gap-2">
+                <TextField
+                  label="Otros cobros"
+                  inputMode="decimal"
+                  value={form.extraText}
+                  onValueChange={(v) => {
+                    set('extraText', v);
+                    if (errors.price) setErrors((er) => ({ ...er, price: undefined }));
+                  }}
+                  placeholder="Ej: 5000"
+                  error={form.extraText.trim() && extraAmount === null ? 'Solo números' : null}
+                  className="h-10"
+                />
+                <TextField
+                  label="¿Qué fue?"
+                  value={form.extraNote}
+                  onValueChange={(v) => set('extraNote', v)}
+                  placeholder="Seña, recargo…"
+                  className="h-10"
+                />
+              </div>
+
+              {errors.price && (
+                <p role="alert" className="mt-2 text-sm font-semibold text-red-700">
+                  {errors.price}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-crema p-3">
+                <div>
+                  <p className="text-xs font-bold text-stone-500">Total de la sesión</p>
+                  <p className="text-2xl font-extrabold text-stone-900 tabular-nums">
+                    {total !== null ? formatMoney(total) : '–'}
+                  </p>
+                  {missingCharges.length > 0 && (
+                    <p className="text-xs font-semibold text-amber-800">
+                      Falta el monto de {missingCharges.length} {missingCharges.length === 1 ? 'opción' : 'opciones'}
+                    </p>
+                  )}
+                </div>
+                {total !== null && (
+                  <Toggle
+                    label={form.paid ? 'Pagado' : 'Falta pagar'}
+                    description="Tocá para cambiar"
+                    checked={form.paid}
+                    onChange={(v) => set('paid', v)}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div id="paso-extras" className="card scroll-mt-24 space-y-4 p-4">
               <div>
                 <TextField
                   label="Próxima sesión sugerida"
+                  optional
                   type="date"
                   value={form.nextSessionDate}
                   min={form.date || undefined}
                   onValueChange={(v) => set('nextSessionDate', v)}
-                  wrapperClassName="sm:max-w-xs"
+                  className="h-10"
                 />
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {[7, 15, 21, 30].map((d) => {
                     const target = addDays(form.date || todayISO(), d);
                     return (
@@ -657,106 +667,88 @@ function SessionForm({
                   {form.nextSessionDate && <QuickChip onClick={() => set('nextSessionDate', '')}>Quitar</QuickChip>}
                 </div>
               </div>
-
               <div>
-                <p className="mb-1.5 font-semibold text-stone-800">Fotos (antes / después)</p>
+                <p className="mb-1.5 text-sm font-semibold text-stone-700">
+                  Fotos <span className="font-normal text-stone-500">(antes / después, quedan en esta PC)</span>
+                </p>
                 <PhotoInput photos={form.photos} onChange={(photos) => set('photos', photos)} />
-                <p className="mt-2 text-sm text-stone-500">Las fotos se guardan solo en este dispositivo.</p>
               </div>
             </div>
-          </Card>
+          </div>
+        </div>
 
-          <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-2 rounded-2xl bg-white/90 p-2.5 shadow-pop ring-1 ring-stone-900/5 backdrop-blur-xl sm:p-3 lg:bottom-5">
-            {editingId ? (
+        {/* Barra para guardar, siempre a la vista */}
+        <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 mt-4 flex items-center gap-2 rounded-2xl bg-white/90 p-2.5 shadow-pop ring-1 ring-stone-900/5 backdrop-blur-xl lg:bottom-4">
+          <p className="hidden min-w-0 flex-1 truncate pl-2 text-sm text-stone-600 lg:block">
+            {form.clientId ? (
               <>
-                <Button
-                  variant="ghost"
-                  className="text-red-700 hover:bg-red-50"
-                  icon={<Trash2 className="size-5" />}
-                  onClick={() => void remove()}
-                  aria-label="Eliminar sesión"
-                >
-                  <span className="hidden sm:inline">Eliminar</span>
-                </Button>
-                <div className="flex-1" />
-                <Button variant="secondary" size="lg" onClick={() => navigate(-1)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" size="lg" disabled={saving} icon={<Save className="size-5" />}>
-                  {saving ? (
-                    'Guardando…'
-                  ) : (
-                    <span>
-                      Guardar<span className="hidden sm:inline"> cambios</span>
-                    </span>
-                  )}
-                </Button>
+                <strong className="text-stone-900">{clientName(clientsById.get(form.clientId))}</strong>
+                {' · '}
+                {form.date ? formatDate(form.date) : 'sin fecha'}
+                {selectedCount > 0 && ` · ${plural(selectedCount, 'opción elegida', 'opciones elegidas')}`}
+                {total !== null && ` · Total ${formatMoney(total)}`}
               </>
             ) : (
-              <>
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={saving}
-                  icon={<Save className="hidden size-6 sm:block" />}
-                  className="flex-1 whitespace-nowrap"
-                >
-                  {saving ? 'Guardando…' : 'Guardar sesión'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  disabled={saving}
-                  onClick={() => void save('another')}
-                  aria-label="Guardar y cargar otra sesión"
-                >
-                  <span className="sm:hidden">Guardar y otra</span>
-                  <span className="hidden sm:inline">Guardar y cargar otra</span>
-                </Button>
-              </>
+              'Elegí la clienta para empezar.'
             )}
-          </div>
-        </form>
-
-        <aside className="hidden lg:block">
-          <div className="card sticky top-40 overflow-hidden">
-            <div aria-hidden className="h-1.5 bg-linear-to-r from-rosa-400 via-rosa-300 to-salvia-300" />
-            <div className="p-5">
-              {form.clientId ? (
-                <ClientSummary clientId={form.clientId} excludeSessionId={editingId} onDuplicate={duplicateFrom} />
-              ) : (
-                <div className="py-4 text-center">
-                  <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-rosa-50 text-rosa-500">
-                    <UserRound className="size-6" aria-hidden />
+          </p>
+          {editingId ? (
+            <>
+              <Button
+                variant="ghost"
+                className="text-red-700 hover:bg-red-50"
+                icon={<Trash2 className="size-5" />}
+                onClick={() => void remove()}
+                aria-label="Eliminar sesión"
+              >
+                <span className="hidden sm:inline">Eliminar</span>
+              </Button>
+              <div className="flex-1 lg:hidden" />
+              <Button variant="secondary" size="lg" onClick={() => navigate(-1)}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="lg" disabled={saving} icon={<Save className="size-5" />}>
+                {saving ? (
+                  'Guardando…'
+                ) : (
+                  <span>
+                    Guardar<span className="hidden sm:inline"> cambios</span>
                   </span>
-                  <p className="text-sm text-stone-500">
-                    Cuando elijas una clienta, acá vas a ver sus <strong className="text-stone-700">alergias</strong>,{' '}
-                    <strong className="text-stone-700">medicación</strong>,{' '}
-                    <strong className="text-stone-700">tipo de piel</strong> y su{' '}
-                    <strong className="text-stone-700">última sesión</strong>.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </aside>
-      </div>
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={saving}
+                onClick={() => void save('another')}
+                aria-label="Guardar y cargar otra sesión"
+              >
+                <span className="sm:hidden">Guardar y otra</span>
+                <span className="hidden sm:inline">Guardar y cargar otra</span>
+              </Button>
+              <Button
+                type="submit"
+                size="lg"
+                disabled={saving}
+                icon={<Save className="hidden size-6 sm:block" />}
+                className="flex-1 whitespace-nowrap lg:flex-none lg:px-8"
+              >
+                {saving ? 'Guardando…' : 'Guardar sesión'}
+              </Button>
+            </>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
 
-function StepTitle({ n, children }: { n: number; children: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-2.5">
-      <span
-        aria-hidden
-        className="inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-rosa-500 to-rosa-600 font-display text-base font-semibold text-white shadow-[0_6px_14px_-6px_rgb(176_63_88/0.8)]"
-      >
-        {n}
-      </span>
-      {children}
-    </span>
-  );
+/** Título chico de cada bloque del panel. */
+function PanelLabel({ children }: { children: React.ReactNode }) {
+  return <p className="mb-2 text-xs font-bold tracking-wide text-stone-400 uppercase">{children}</p>;
 }
 
 function QuickChip({
@@ -823,46 +815,5 @@ function SavedView({ saved, onAnother }: { saved: { sessionId: number; clientId:
         </div>
       </div>
     </div>
-  );
-}
-
-/** Barra de pasos fija arriba del formulario: muestra qué está completo y lleva a cada paso. */
-function StepsBar({ steps }: { steps: { id: string; label: string; value?: string; done: boolean }[] }) {
-  const doneCount = steps.filter((s) => s.done).length;
-  return (
-    <nav aria-label="Pasos de la sesión" className="sticky top-0 z-20 -mx-2 mb-6 hidden px-2 py-2 lg:top-16 lg:block">
-      <div className="card flex items-center gap-1 p-2 backdrop-blur-xl">
-        {steps.map((step, i) => (
-          <div key={step.id} className="flex min-w-0 flex-1 items-center gap-1">
-            <button
-              type="button"
-              onClick={() => document.getElementById(step.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left transition-colors hover:bg-stone-50"
-            >
-              <span
-                className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                  step.done
-                    ? 'bg-salvia-500 text-white shadow-[0_4px_10px_-4px_rgb(66_106_82/0.8)]'
-                    : 'bg-stone-100 text-stone-500 group-hover:bg-rosa-50 group-hover:text-rosa-600'
-                }`}
-              >
-                {step.done ? <Check className="size-4" strokeWidth={3} aria-hidden /> : i + 1}
-              </span>
-              <span className="min-w-0">
-                <span
-                  className={`block truncate text-sm font-semibold ${step.done ? 'text-stone-900' : 'text-stone-500'}`}
-                >
-                  {step.label}
-                </span>
-                {step.value && <span className="num block truncate text-xs text-stone-500">{step.value}</span>}
-              </span>
-            </button>
-          </div>
-        ))}
-        <span className="num ml-1 shrink-0 rounded-lg bg-stone-50 px-2.5 py-1 text-xs font-bold text-stone-500">
-          {doneCount}/{steps.length}
-        </span>
-      </div>
-    </nav>
   );
 }
